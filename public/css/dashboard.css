@@ -163,6 +163,25 @@ body {
     0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
+.logo-ca-badge {
+  height: 44px;
+  width: 44px;
+  border-radius: 12px;
+  background: #85da1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.18),
+    0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
 .header-title-wrap {
   display: flex;
   flex-direction: column;

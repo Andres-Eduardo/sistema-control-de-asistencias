@@ -1,4 +1,4 @@
-// js/auth.js — Módulo compartido de autenticación · Fundación Juanfe
+// js/auth.js — Módulo compartido de autenticación
 
 const PERMISOS = {
   admin: ["asistencia", "bebes", "dashboard", "importar"],

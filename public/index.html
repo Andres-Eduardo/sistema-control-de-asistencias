@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Asistencia - Fundación Juanfe</title>
+  <title>Asistencia — Sistema de Control de Asistencia</title>
   <link rel="icon" type="image/png" href="img/Logo-Juanfe-verde-1-1.png" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -14,7 +14,7 @@
   <header>
     <div class="header-flex">
       <img src="img/Logo-Juanfe-verde-1-1.png" alt="Logo Juanfe" class="logo-img" />
-      <h1>Control de Asistencia — Fundación Juanfe</h1>
+      <h1>Control de Asistencia</h1>
     </div>
   </header>
 
@@ -83,10 +83,10 @@
       </section>
 
       <section class="controls-row">
-        <input type="text" id="search-input" class="search-input" placeholder="Buscar bebé o madre en la lista..." />
+        <input type="text" id="search-input" class="search-input" placeholder="Buscar beneficiario o acudiente..." />
         <nav class="tabs" id="days-tabs" role="tablist"></nav>
         <button id="add-baby-btn" class="btn btn-add-baby">
-          ＋ Añadir bebé
+          ＋ Añadir beneficiario
         </button>
         <button id="export-btn" class="btn btn-export-inline" disabled>
           ↓ Exportar
@@ -102,11 +102,12 @@
   <div id="addBabyModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
     <div class="modal-content">
       <span class="close" title="Cerrar">&times;</span>
-      <h2 id="modalTitle">Agregar Nuevo Bebé</h2>
+      <h2 id="modalTitle">Agregar Nuevo Beneficiario</h2>
 
       <div class="form-group search-box-wrapper">
-        <label for="searchBaby">Buscar Bebé Existente</label>
-        <input type="text" id="searchBaby" placeholder="Escribe nombre del bebé o madre..." autocomplete="off" />
+        <label for="searchBaby">Buscar Beneficiario Existente</label>
+        <input type="text" id="searchBaby" placeholder="Escribe nombre del beneficiario o acudiente..."
+          autocomplete="off" />
         <div id="searchResults" class="search-results" style="display: none"></div>
       </div>
 
@@ -114,44 +115,42 @@
 
       <form id="babyForm">
         <div class="form-group">
-          <label for="babyName">Nombre del Bebé *</label>
+          <label for="babyName">Nombre del Beneficiario *</label>
           <input type="text" id="babyName" name="babyName" placeholder="Nombre completo" required />
         </div>
 
         <div class="form-group">
-          <label for="motherName">Nombre de la Madre *</label>
+          <label for="motherName">Nombre del Acudiente *</label>
           <input type="text" id="motherName" name="motherName" placeholder="Nombre completo" required />
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="motherFase">Fase</label>
+            <label for="motherFase">Nivel</label>
             <select id="motherFase" name="fase">
               <option value="" disabled selected>Seleccionar</option>
-              <option value="UTE">UTE</option>
-              <option value="ULA 1">ULA 1</option>
-              <option value="ULA 2">ULA 2</option>
-              <option value="TSF">TSF</option>
-              <option value="Otra">Otra</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="motherPrograma">Programa</label>
-            <select id="motherPrograma" name="programa">
-              <option value="" disabled selected>Seleccionar</option>
-              <option value="Hotelería">Hotelería</option>
-              <option value="Cocina">Cocina</option>
-              <option value="Belleza">Belleza</option>
-              <option value="Auxiliar Administrativo">
-                Auxiliar Administrativo
-              </option>
+              <option value="Nivel 1">Nivel 1</option>
+              <option value="Nivel 2">Nivel 2</option>
+              <option value="Nivel 3">Nivel 3</option>
+              <option value="Nivel 4">Nivel 4</option>
               <option value="Otro">Otro</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="babyEdad">Edad (meses)</label>
+            <label for="motherPrograma">Taller</label>
+            <select id="motherPrograma" name="programa">
+              <option value="" disabled selected>Seleccionar</option>
+              <option value="Taller A">Taller A</option>
+              <option value="Taller B">Taller B</option>
+              <option value="Taller C">Taller C</option>
+              <option value="Taller D">Taller D</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="babyEdad">Edad</label>
             <select id="babyEdad" name="edad">
               <option value="" disabled selected>Seleccionar</option>
               <option value="6-15">6-15 meses</option>
@@ -228,7 +227,7 @@
       <div style="padding:22px 24px 10px;">
         <div
           style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">
-          ¿Estás segura de agregar este bebé?</div>
+          ¿Estás seguro de agregar este beneficiario?</div>
         <div style="font-size:16px;font-weight:700;color:#222;" id="abcNombre"></div>
         <div style="font-size:13px;color:#666;margin-top:3px;" id="abcMadre"></div>
         <div style="font-size:12px;color:#888;margin-top:10px;padding:8px 10px;background:#f9f9f9;border-radius:6px;"
@@ -244,6 +243,7 @@
     </div>
   </div>
 
+  <script src="js/constants.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/auth.js"></script>

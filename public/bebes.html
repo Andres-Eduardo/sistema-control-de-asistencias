@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Base de Datos — Fundación Juanfe</title>
+  <title>Base de Datos — Sistema de Control de Asistencia</title>
   <link rel="icon" type="image/png" href="img/Logo-Juanfe-verde-1-1.png" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/bebes.css" />
@@ -114,7 +114,7 @@
   <header>
     <div class="header-flex">
       <img src="img/Logo-Juanfe-verde-1-1.png" alt="Logo Juanfe" class="logo-img" />
-      <h1>Base de Datos — Fundación Juanfe</h1>
+      <h1>Base de Datos — Beneficiarios</h1>
     </div>
   </header>
 
@@ -131,37 +131,35 @@
 
         <div class="form-grid-top">
           <div class="form-field">
-            <label>Nombre bebé</label>
+            <label>Nombre beneficiario</label>
             <input type="text" id="fNombre" placeholder="Nombre completo" />
           </div>
           <div class="form-field">
-            <label>Nombre madre</label>
-            <input type="text" id="fMadre" placeholder="Nombre completo de la madre" />
+            <label>Nombre acudiente</label>
+            <input type="text" id="fMadre" placeholder="Nombre completo del acudiente" />
           </div>
         </div>
 
         <div class="form-grid-bottom">
           <div class="form-field">
-            <label>Fase</label>
+            <label>Nivel</label>
             <select id="fFase">
               <option value="">Seleccionar</option>
-              <option value="UTE">UTE</option>
-              <option value="ULA 1">ULA 1</option>
-              <option value="ULA 2">ULA 2</option>
-              <option value="TSF">TSF</option>
-              <option value="Otra">Otra</option>
+              <option value="Nivel 1">Nivel 1</option>
+              <option value="Nivel 2">Nivel 2</option>
+              <option value="Nivel 3">Nivel 3</option>
+              <option value="Nivel 4">Nivel 4</option>
+              <option value="Otro">Otro</option>
             </select>
           </div>
           <div class="form-field">
-            <label>Programa</label>
+            <label>Taller</label>
             <select id="fPrograma">
               <option value="">Seleccionar</option>
-              <option value="Hotelería">Hotelería</option>
-              <option value="Cocina">Cocina</option>
-              <option value="Belleza">Belleza</option>
-              <option value="Auxiliar Administrativo">
-                Auxiliar Administrativo
-              </option>
+              <option value="Taller A">Taller A</option>
+              <option value="Taller B">Taller B</option>
+              <option value="Taller C">Taller C</option>
+              <option value="Taller D">Taller D</option>
               <option value="Otro">Otro</option>
             </select>
           </div>
@@ -197,8 +195,7 @@
       <section class="lista-section">
         <div class="lista-header">
           <span class="lista-title" id="listaTitle">Registros actuales</span>
-          <input type="text" class="lista-search" id="listaSearch"
-            placeholder="Buscar por nombre, fase o programa..." />
+          <input type="text" class="lista-search" id="listaSearch" placeholder="Buscar por nombre, nivel o taller..." />
         </div>
         <div id="listaBebes"></div>
         <div class="pagination" id="pagination"></div>
@@ -216,35 +213,33 @@
       <input type="hidden" id="editId" />
 
       <div class="edit-field">
-        <label>Nombre bebé</label>
+        <label>Nombre beneficiario</label>
         <input type="text" id="eNombre" placeholder="Nombre completo" />
       </div>
       <div class="edit-field">
-        <label>Nombre madre</label>
-        <input type="text" id="eMadre" placeholder="Nombre completo de la madre" />
+        <label>Nombre acudiente</label>
+        <input type="text" id="eMadre" placeholder="Nombre completo del acudiente" />
       </div>
       <div class="edit-row">
         <div class="edit-field">
-          <label>Fase</label>
+          <label>Nivel</label>
           <select id="eFase">
             <option value="">Seleccionar</option>
-            <option value="UTE">UTE</option>
-            <option value="ULA 1">ULA 1</option>
-            <option value="ULA 2">ULA 2</option>
-            <option value="TSF">TSF</option>
-            <option value="Otra">Otra</option>
+            <option value="Nivel 1">Nivel 1</option>
+            <option value="Nivel 2">Nivel 2</option>
+            <option value="Nivel 3">Nivel 3</option>
+            <option value="Nivel 4">Nivel 4</option>
+            <option value="Otro">Otro</option>
           </select>
         </div>
         <div class="edit-field">
-          <label>Programa</label>
+          <label>Taller</label>
           <select id="ePrograma">
             <option value="">Seleccionar</option>
-            <option value="Hotelería">Hotelería</option>
-            <option value="Cocina">Cocina</option>
-            <option value="Belleza">Belleza</option>
-            <option value="Auxiliar Administrativo">
-              Auxiliar Administrativo
-            </option>
+            <option value="Taller A">Taller A</option>
+            <option value="Taller B">Taller B</option>
+            <option value="Taller C">Taller C</option>
+            <option value="Taller D">Taller D</option>
             <option value="Otro">Otro</option>
           </select>
         </div>
@@ -295,9 +290,8 @@
     </div>
   </div>
 
+  <script src="js/constants.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/bebes.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       const usuario = await requireAuth("bebes");

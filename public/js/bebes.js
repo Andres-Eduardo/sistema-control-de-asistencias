@@ -1,11 +1,10 @@
-// bebes.js — Base de Datos · Fundación Juanfe
+// bebes.js — Base de Datos · Sistema de Control de Asistencia
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
 const PROGRAMA_BADGE = {
-  Cocina: "badge-cocina",
-  Hotelería: "badge-hoteleria",
-  Hoteleria: "badge-hoteleria",
-  Belleza: "badge-belleza",
-  "Auxiliar Administrativo": "badge-auxiliar",
+  "Taller A": "badge-cocina",
+  "Taller B": "badge-hoteleria",
+  "Taller C": "badge-belleza",
+  "Taller D": "badge-auxiliar",
   Otro: "badge-otro",
 };
 const PAGE_SIZE = 30;
@@ -173,7 +172,7 @@ async function guardarEditar() {
   const nombre_bebe = document.getElementById("eNombre").value.trim();
   const nombre_madre = document.getElementById("eMadre").value.trim();
   if (!nombre_bebe || !nombre_madre) {
-    toast("Nombre del bebé y madre son obligatorios", true);
+    toast("Nombre del beneficiario y acudiente son obligatorios", true);
     return;
   }
   const dias = [...document.querySelectorAll("[data-edit-dia].active")].map(
@@ -231,7 +230,7 @@ async function guardar() {
   const nombre_bebe = document.getElementById("fNombre").value.trim();
   const nombre_madre = document.getElementById("fMadre").value.trim();
   if (!nombre_bebe || !nombre_madre) {
-    toast("Nombre del bebé y madre son obligatorios", true);
+    toast("Nombre del beneficiario y acudiente son obligatorios", true);
     return;
   }
   const body = {

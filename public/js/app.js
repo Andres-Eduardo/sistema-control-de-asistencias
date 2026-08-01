@@ -18,14 +18,8 @@ const DIAS_API = {
   Viernes: "Viernes",
 };
 
-const Fases = ["UTE", "ULA 1", "ULA 2", "TSF", "Otra"];
-const Programas = [
-  "Hotelería",
-  "Cocina",
-  "Belleza",
-  "Auxiliar Administrativo",
-  "Otro",
-];
+const Fases = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Otro"];
+const Programas = ["Taller A", "Taller B", "Taller C", "Taller D", "Otro"];
 
 const diseaseOptions = [
   { value: "SANOS", text: "SANOS (ingresados a CIDI)" },
@@ -59,10 +53,10 @@ const columnOrder = [
   "NoCidi",
 ];
 const columnHeaders = {
-  NombreBebe: "Nombre Bebé",
-  NombreMadre: "Nombre Madre",
-  Fase: "Fase",
-  ProgramaMadre: "Programa",
+  NombreBebe: "Nombre Beneficiario",
+  NombreMadre: "Nombre Acudiente",
+  Fase: "Nivel",
+  ProgramaMadre: "Taller",
   Edad: "Edad (meses)",
   Asistencia: "Asistencia",
   Ubicacion: "Ubicación",
@@ -75,10 +69,10 @@ const columnHeaders = {
 
 // ─── Mapa de badges por programa ─────────────────────────────────────────────
 const PROGRAMA_BADGE = {
-  Cocina: "badge-cocina",
-  Hotelería: "badge-hoteleria",
-  Belleza: "badge-belleza",
-  "Auxiliar Administrativo": "badge-auxiliar",
+  "Taller A": "badge-cocina",
+  "Taller B": "badge-hoteleria",
+  "Taller C": "badge-belleza",
+  "Taller D": "badge-auxiliar",
   Otro: "badge-otro",
   Hoteleria: "badge-hoteleria", // alias sin tilde por si viene así de BD
 };
@@ -141,7 +135,7 @@ function setupEventListeners() {
 
     document.getElementById("exportConfirmMsg").innerHTML =
       `Vas a exportar el listado del <strong>${dayToExport}</strong> con:<br>
-       <strong>${total}</strong> bebés registrados &nbsp;·&nbsp;
+       <strong>${total}</strong> beneficiarios registrados &nbsp;·&nbsp;
        <strong style="color:#2e7d32">${presentes}</strong> presentes &nbsp;·&nbsp;
        <strong style="color:#c62828">${ausentes}</strong> ausentes`;
 
@@ -254,7 +248,7 @@ async function loadMasterDataFromServer() {
     exportBtn.disabled = false;
     updateSyncStatus(
       "ok",
-      `BD conectada — ${masterData.length} bebés cargados`,
+      `BD conectada — ${masterData.length} beneficiarios cargados`,
     );
   } catch (err) {
     updateSyncStatus("error", "Sin conexión a la BD — usando datos guardados");
@@ -449,7 +443,7 @@ function renderTable(day, data, searchTerm = "") {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>#</th><th>Nombre Bebé</th><th>Nombre Madre</th><th>Fase</th>
+        <th>#</th><th>Nombre Beneficiario</th><th>Nombre Acudiente</th><th>Nivel</th>
         <th>Programa</th><th>Edad</th><th>Asistencia</th>
       </tr>
     </thead>
@@ -560,7 +554,7 @@ function renderRow(tr, row, day, index, rowNum) {
   btnPair.append(btnSi, btnNo, btnVer, btnEditar);
 
   // ── Select tipo: Normal / No CIDI / Extras ────────────────────────────────
-  // Permite cambiar el tipo de un bebé ya añadido sin tener que eliminarlo
+  // Permite cambiar el tipo de un beneficiario ya añadido sin tener que eliminarlo
   const selTipo = document.createElement("select");
   selTipo.className = "sel-tipo-bebe";
   selTipo.title = "Cambiar tipo de registro";
@@ -607,7 +601,7 @@ function renderRow(tr, row, day, index, rowNum) {
   grpUbic.innerHTML = "<label>Ubicación</label>";
   grpUbic.appendChild(
     createSelect(
-      ["Juanfe", "Casa", "Otro"],
+      ["Sede principal", "Casa", "Otro"],
       row.Ubicacion,
       (val) => updateField(day, index, "Ubicacion", val),
       "Seleccionar",
@@ -1183,7 +1177,7 @@ function addAddBabyButton() {
       )
     ) {
       showSmartAlert(
-        `El bebé "${nombreNuevo}" ya está en la lista de hoy (${currentDay}).`,
+        `El beneficiario "${nombreNuevo}" ya está en la lista de hoy (${currentDay}).`,
       );
       return;
     }
@@ -1204,7 +1198,9 @@ function addAddBabyButton() {
     };
 
     if (!newBaby.NombreBebe || !newBaby.NombreMadre) {
-      alert("Por favor complete al menos el nombre del bebé y la madre.");
+      alert(
+        "Por favor complete al menos el nombre del beneficiario y el acudiente.",
+      );
       return;
     }
 

@@ -1,4 +1,4 @@
-// js/bienvenida.js — Pantalla de bienvenida · Fundación Juanfe
+// js/bienvenida.js — Pantalla de bienvenida · Sistema de Control de Asistencia
 
 const OPCIONES_ROL = {
   admin: [
@@ -22,7 +22,7 @@ const OPCIONES_ROL = {
 const SALUDO = {
   admin: "Bienvenido, administrador",
   coordinadora: "Bienvenida, coordinadora",
-  profesora: "Bienvenida, profesora",
+  profesora: "Bienvenida, instructora",
 };
 
 (async () => {

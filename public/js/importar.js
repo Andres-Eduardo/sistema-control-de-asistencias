@@ -1,4 +1,4 @@
-// importar.js — Importador de historial · Fundación Juanfe
+// importar.js — Importar / Exportar · Sistema de Control de Asistencia
 // ── Estado ────────────────────────────────────────────────
 let archivos = []; // { nombre, fecha, dia, registros, estado, msg, importado }
 let filtroActivo = "todos";

@@ -1,6 +1,6 @@
 "use strict";
 /* =============================================================================
-   dashboard.js — Fundación Juanfe · Dashboard de Asistencia  v4
+   dashboard.js — Sistema de Control de Asistencia · Dashboard  v4
    =============================================================================
 
    ARQUITECTURA
@@ -53,7 +53,7 @@ function norm(str = "") {
 const UnifiedModel = (() => {
   // ---------------------------------------------------------------------------
   //  Mapeo de variantes de columna → nombre canónico
-  //  Cubre todos los formatos de Excel usados en el sistema Juanfe
+  //  Cubre todos los formatos de Excel del sistema
   // ---------------------------------------------------------------------------
   const COL_CANON = {
     // Bebé
@@ -406,8 +406,8 @@ const PALETTE = [
 //  localStorage solo guarda la lista de nombres (metadatos).
 // =============================================================================
 
-const LS_KEY = "juanfe_dash_v4_meta";
-const IDB_NAME = "juanfe_dash_v4";
+const LS_KEY = "asistencia_dash_v4_meta";
+const IDB_NAME = "asistencia_dash_v4";
 const IDB_STORE = "archivos";
 const IDB_VERSION = 2; // Incrementar aquí si se agregan nuevos stores en el futuro
 let _idb = null;
@@ -509,7 +509,7 @@ const sheetRow = document.getElementById("sheetRow");
 const babySection = document.getElementById("babySection");
 const uploadZone = document.getElementById("supabaseZone"); // zona principal renombrada
 
-const LS_RANGO_KEY = "juanfe_dash_ultimo_rango";
+const LS_RANGO_KEY = "asistencia_dash_ultimo_rango";
 
 // La inicialización ya NO corre aquí automáticamente.
 // El script inline de dashboard.html llama initDashboard() DESPUÉS de requireAuth().
@@ -1977,11 +1977,11 @@ function buildChartTasaReporte(data) {
 function buildChartUbicacion(data) {
   // data = registros individuales (bebé × día) — NO el resumen
   // La ubicación se registra cuando un bebé ausente informa desde dónde está.
-  // Solo contamos registros con ubicación explícita (juanfe, casa, otro conocido).
+  // Solo contamos registros con ubicación explícita (sede, casa, otro).
   const cUbic = colKey("ubicacion");
   if (!cUbic) return;
   const UBIC = {
-    Juanfe: { color: VERDE, count: 0 },
+    Sede: { color: VERDE, count: 0 },
     Casa: { color: AZUL, count: 0 },
     Otro: { color: NARANJA, count: 0 },
   };
@@ -1989,7 +1989,7 @@ function buildChartUbicacion(data) {
   data.forEach((r) => {
     const raw = norm(String(r[cUbic] || "").trim());
     if (!raw) return; // ignorar vacíos
-    if (raw === "juanfe") UBIC.Juanfe.count++;
+    if (raw === "sede principal" || raw === "sede") UBIC.Sede.count++;
     else if (raw === "casa") UBIC.Casa.count++;
     else UBIC.Otro.count++;
   });
@@ -4139,7 +4139,7 @@ function exportarTablaConsolidada() {
 
   // Paleta de colores
   const C = {
-    headerBg: "85DA1A", // verde Juanfe
+    headerBg: "85DA1A", // verde principal
     headerFg: "FFFFFF",
     presenteBg: "F0FBE6", // verde suave
     ausenteBg: "FEF2F2", // rojo suave
@@ -4263,7 +4263,7 @@ function exportarTablaConsolidada() {
   // Descargar
   const hoy = new Date();
   const ts = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}${String(hoy.getDate()).padStart(2, "0")}`;
-  const nombreArchivo = `juanfe_consolidado_${ts}_${consolidados.length}bebes.xlsx`;
+  const nombreArchivo = `asistencia_consolidada_${ts}_${consolidados.length}registros.xlsx`;
 
   try {
     XLSX.writeFile(wb, nombreArchivo);
@@ -4286,7 +4286,7 @@ function exportarTablaConsolidada() {
 //
 //  Usa la librería SheetJS (XLSX) ya cargada en dashboard.html.
 //  Genera un archivo .xlsx con:
-//    • Encabezados con fondo verde Juanfe y texto blanco en negrita
+//    • Encabezados con fondo verde principal y texto blanco en negrita
 //    • Filas alternadas en blanco/verde muy claro (zebra)
 //    • Ausentes destacados en rojo suave
 //    • Presentes en verde suave
@@ -4382,7 +4382,7 @@ function exportarExcel(datos, COLS) {
   // Para máxima compatibilidad, generamos el archivo con datos limpios y
   // agregamos estilos via el objeto de celda si la versión lo permite.
 
-  // Color verde Juanfe
+  // Color verde principal
   const VERDE_JUANFE = "85DA1A";
   const VERDE_TEXTO = "FFFFFF";
   const VERDE_CLARO = "F0FAD8"; // fondo par
@@ -4497,7 +4497,7 @@ function exportarExcel(datos, COLS) {
   // Nombre del archivo con fecha
   const hoy = new Date();
   const yyyymmdd = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}${String(hoy.getDate()).padStart(2, "0")}`;
-  const nombreArchivo = `asistencia_juanfe_${yyyymmdd}_${datos.length}registros.xlsx`;
+  const nombreArchivo = `asistencia_${yyyymmdd}_${datos.length}registros.xlsx`;
 
   try {
     XLSX.writeFile(wb, nombreArchivo);

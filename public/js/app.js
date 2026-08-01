@@ -57,7 +57,7 @@ const columnHeaders = {
   NombreMadre: "Nombre Acudiente",
   Fase: "Nivel",
   ProgramaMadre: "Taller",
-  Edad: "Edad (meses)",
+  Edad: "Edad",
   Asistencia: "Asistencia",
   Ubicacion: "Ubicación",
   Reporte: "Reporte",
@@ -1186,7 +1186,7 @@ function addAddBabyButton() {
     const resumen = [
       newBaby.Fase ? `Fase: ${newBaby.Fase}` : null,
       newBaby.ProgramaMadre ? `Programa: ${newBaby.ProgramaMadre}` : null,
-      newBaby.Edad ? `Edad: ${newBaby.Edad} meses` : null,
+      newBaby.Edad ? `Edad: ${newBaby.Edad}` : null,
       `Tipo: ${tipo}`,
     ]
       .filter(Boolean)

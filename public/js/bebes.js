@@ -72,6 +72,10 @@ function renderLista() {
     const badge = PROGRAMA_BADGE[b.ProgramaMadre]
       ? `<span class="badge-programa ${PROGRAMA_BADGE[b.ProgramaMadre]}">${b.ProgramaMadre}</span>`
       : "";
+    const tipoBadge =
+      b.Tipo && b.Tipo !== "Normal"
+        ? `<span class="badge-programa badge-otro">${b.Tipo}</span>`
+        : "";
     const diasHtml = b.dias
       .map((d) => `<span class="dia-tag">${d}</span>`)
       .join("");
@@ -80,6 +84,7 @@ function renderLista() {
               <div class="card-row1">
                 <span class="card-nombre">${b.NombreBebe}</span>
                 ${badge}
+                ${tipoBadge}
                 <span class="card-meta">${[b.Fase, b.Edad || ""].filter(Boolean).join(" · ")}</span>
               </div>
               <div class="card-row2">
@@ -150,6 +155,7 @@ function cargarEnForm(b) {
   document.getElementById("eFase").value = b.Fase || "";
   document.getElementById("ePrograma").value = b.ProgramaMadre || "";
   document.getElementById("eEdad").value = b.Edad || "";
+  document.getElementById("eTipo").value = b.Tipo || "Normal";
   // TSF deshabilita programa
   const esTSF = b.Fase === "TSF";
   document.getElementById("ePrograma").disabled = esTSF;
@@ -184,6 +190,7 @@ async function guardarEditar() {
     Fase: document.getElementById("eFase").value,
     programa: document.getElementById("ePrograma").value,
     edad: document.getElementById("eEdad").value,
+    tipo: document.getElementById("eTipo").value,
     dias,
   };
 
@@ -220,6 +227,7 @@ function limpiar() {
   ["fFase", "fPrograma", "fEdad"].forEach(
     (id) => (document.getElementById(id).value = ""),
   );
+  document.getElementById("fTipo").value = "Normal";
   document
     .querySelectorAll(".dia-pill")
     .forEach((p) => p.classList.remove("active"));
@@ -239,6 +247,7 @@ async function guardar() {
     Fase: document.getElementById("fFase").value,
     programa: document.getElementById("fPrograma").value,
     edad: document.getElementById("fEdad").value,
+    tipo: document.getElementById("fTipo").value,
     dias: [...document.querySelectorAll(".dia-pill.active")].map(
       (p) => p.dataset.dia,
     ),

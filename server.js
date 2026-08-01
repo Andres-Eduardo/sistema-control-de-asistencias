@@ -225,7 +225,7 @@ app.get("/api/bebes", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("bebes")
-      .select("nombre_bebe, nombre_madre, fase, programa, edad")
+      .select("nombre_bebe, nombre_madre, fase, programa, edad, tipo")
       .order("nombre_bebe", { ascending: true })
       .limit(5000);
     if (error) throw error;
@@ -243,6 +243,7 @@ app.get("/api/bebes", async (req, res) => {
         InstitucionMadre: b.fase, // alias para compatibilidad con app.js viejo
         ProgramaMadre: b.programa,
         Edad: b.edad,
+        Tipo: b.tipo || "Normal",
       })),
     });
   } catch (err) {
@@ -282,7 +283,7 @@ app.get("/api/dias", async (req, res) => {
  *       también acepta: { InstitucionMadre: "..." } en lugar de fase
  */
 app.post("/api/bebes", async (req, res) => {
-  const { nombre_bebe, nombre_madre, programa, edad, dias } = req.body;
+  const { nombre_bebe, nombre_madre, programa, edad, dias, tipo } = req.body;
   const fase = leerFase(req.body); // acepta Fase o InstitucionMadre
 
   if (!nombre_bebe || !String(nombre_bebe).trim())
@@ -301,7 +302,7 @@ app.post("/api/bebes", async (req, res) => {
     if (existing) {
       const { error: errUp } = await supabase
         .from("bebes")
-        .update({ nombre_madre, fase, programa, edad })
+        .update({ nombre_madre, fase, programa, edad, tipo: tipo || "Normal" })
         .eq("id", existing.id);
       if (errUp) throw errUp;
       bebeId = existing.id;
@@ -314,6 +315,7 @@ app.post("/api/bebes", async (req, res) => {
           fase,
           programa,
           edad,
+          tipo: tipo || "Normal",
         })
         .select("id")
         .single();
@@ -373,7 +375,7 @@ app.get("/api/asistencia-dias", async (req, res) => {
  */
 app.put("/api/bebes/:id", async (req, res) => {
   const { id } = req.params;
-  const { nombre_bebe, nombre_madre, programa, edad, dias } = req.body;
+  const { nombre_bebe, nombre_madre, programa, edad, dias, tipo } = req.body;
   const fase = leerFase(req.body);
 
   if (!nombre_bebe || !String(nombre_bebe).trim())
@@ -390,6 +392,7 @@ app.put("/api/bebes/:id", async (req, res) => {
         fase,
         programa,
         edad,
+        tipo: tipo || "Normal",
       })
       .eq("id", id);
     if (errUp) throw errUp;
@@ -754,7 +757,9 @@ app.get("/api/exportar", async (req, res) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    // Mapear columnas al formato exacto del Excel de las profesoras
+    // Mapear columnas al formato del Excel de las profesoras
+    // (Edad/Tipo A/Tipo B son compatibles hacia atrás — importar.js acepta
+    // tanto estos nombres nuevos como los viejos "Edad (meses)"/"Extras"/"No CIDI")
     const mapearFila = (r) => ({
       Fecha: r.fecha,
       Dia: r.dia,
@@ -762,14 +767,14 @@ app.get("/api/exportar", async (req, res) => {
       "Nombre Madre": r.nombre_madre,
       Institución: r.fase,
       Programa: r.programa,
-      "Edad (meses)": r.edad,
+      Edad: r.edad,
       Asistencia: r.asistencia,
       Ubicación: r.ubicacion,
       Reporte: r.reporte,
       "Situación Específica": r.situacion_especifica,
       Nota: r.nota,
-      Extras: r.extras,
-      "No CIDI": r.no_cidi,
+      "Tipo A": r.extras,
+      "Tipo B": r.no_cidi,
     });
 
     // Modo preview — devuelve JSON con primeras 15 filas y total
@@ -791,14 +796,14 @@ app.get("/api/exportar", async (req, res) => {
       { wch: 30 }, // Nombre Madre
       { wch: 9 }, // Institución
       { wch: 24 }, // Programa
-      { wch: 13 }, // Edad (meses)
+      { wch: 13 }, // Edad
       { wch: 11 }, // Asistencia
       { wch: 11 }, // Ubicación
       { wch: 9 }, // Reporte
       { wch: 26 }, // Situación Específica
       { wch: 20 }, // Nota
-      { wch: 8 }, // Extras
-      { wch: 8 }, // No CIDI
+      { wch: 8 }, // Tipo A
+      { wch: 8 }, // Tipo B
     ];
 
     const wb = XLSX.utils.book_new();

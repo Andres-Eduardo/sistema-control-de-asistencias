@@ -265,8 +265,12 @@ async function ejecutarImportacion(pendientes) {
               "",
           ).trim(),
           Nota: String(r["Nota"] || "").trim(),
-          Extras: String(r["Extras"] || r["Visitante"] || "").trim(),
-          NoCidi: String(r["No CIDI"] || r["NoCidi"] || "").trim(),
+          Extras: String(
+            r["Tipo A"] || r["Extras"] || r["Visitante"] || "",
+          ).trim(),
+          NoCidi: String(
+            r["Tipo B"] || r["No CIDI"] || r["NoCidi"] || "",
+          ).trim(),
         }))
         .filter((r) => r.NombreBebe);
 

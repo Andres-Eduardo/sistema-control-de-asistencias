@@ -9,6 +9,23 @@
   --absent-btn-dark: #c62828; /* borde/hover botón No */
 }
 
+/* ─── Logo genérico CA ─── */
+.logo-ca {
+  width: 36px;
+  height: 36px;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary-color);
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
@@ -844,8 +861,6 @@ tr.nocidi-row td:first-child {
   transition: border-color 0.13s;
   appearance: none;
   -webkit-appearance: none;
-  max-width: 90px;
-  width: 90px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23aaa'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 6px center;

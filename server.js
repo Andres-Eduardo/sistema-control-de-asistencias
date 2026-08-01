@@ -1,5 +1,5 @@
 /**
- * server.js — Fundación Juanfe · CIDI
+ * server.js — Sistema de Control de Asistencia
  *
  * ENDPOINTS:
  * ─────────────────────────────────────────────────────
@@ -841,5 +841,5 @@ app.get("*", (req, res) => {
 });
 
 app.listen(PORT, () =>
-  console.log(`\n🚀  Servidor CIDI en http://localhost:${PORT}`),
+  console.log(`\n🚀  Servidor en http://localhost:${PORT}`),
 );

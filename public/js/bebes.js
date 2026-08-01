@@ -80,7 +80,7 @@ function renderLista() {
               <div class="card-row1">
                 <span class="card-nombre">${b.NombreBebe}</span>
                 ${badge}
-                <span class="card-meta">${[b.Fase, b.Edad ? b.Edad + " meses" : ""].filter(Boolean).join(" · ")}</span>
+                <span class="card-meta">${[b.Fase, b.Edad || ""].filter(Boolean).join(" · ")}</span>
               </div>
               <div class="card-row2">
                 <span class="card-madre">${b.NombreMadre || ""}</span>

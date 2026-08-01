@@ -23,8 +23,8 @@ const APP_CONFIG = {
 
   // ── Tipos de registro ──────────────────────────────────────────────
   TIPO_NORMAL: "Normal",
-  TIPO_EXTRA: "Extras",
-  TIPO_NOCIDI: "No CIDI", // ajustar según la organización
+  TIPO_EXTRA: "Tipo A", // antes: "Extras"
+  TIPO_NOCIDI: "Tipo B", // antes: "No CIDI"
 
   // ── Situaciones especiales ─────────────────────────────────────────
   SITUACIONES: [

@@ -22,7 +22,7 @@ const Fases = ["Nivel 1", "Nivel 2", "Nivel 3", "Nivel 4", "Otro"];
 const Programas = ["Taller A", "Taller B", "Taller C", "Taller D", "Otro"];
 
 const diseaseOptions = [
-  { value: "SANOS", text: "SANOS (ingresados a CIDI)" },
+  { value: "SANOS", text: "SANOS (ingresados al programa)" },
   { value: "IRA", text: "IRA (gripes, cuadros virales)" },
   { value: "ALERGIAS", text: "ALERGIAS (respiratoria, piel, medicamentos)" },
   { value: "BROTES", text: "BROTES (escabiosis o contagiosos)" },
@@ -323,12 +323,11 @@ function processFromServer(results) {
 }
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
+// Edad como texto libre. Antes forzaba cualquier número a los rangos fijos
+// "6-15"/"16-30" — ahora solo limpia espacios y deja el valor tal cual lo
+// escribió el usuario (o como venga del Excel/BD).
 function normalizarEdad(edad) {
   if (!edad) return "";
-  const num = parseInt(String(edad).replace(/\D/g, ""), 10);
-  if (isNaN(num)) return "";
-  if (num >= 6 && num <= 15) return "6-15";
-  if (num >= 16 && num <= 30) return "16-30";
   return String(edad).trim();
 }
 
@@ -501,24 +500,18 @@ function renderRow(tr, row, day, index, rowNum) {
   tdPrograma.innerHTML = badgePrograma(esTSFinicial ? "" : row.ProgramaMadre);
   tr.appendChild(tdPrograma);
 
-  // Edad — botón toggle pill
+  // Edad — campo de texto libre editable directo en la tabla
   const tdEdad = document.createElement("td");
-  const btnEdad = document.createElement("button");
-  btnEdad.type = "button";
-  btnEdad.className = "btn-edad";
-  const setEdadStyle = (val) => {
-    btnEdad.textContent = (val || "6-15") + " ⇄";
-    btnEdad.dataset.edad = val || "6-15";
-  };
-  setEdadStyle(row.Edad || "6-15");
-  btnEdad.onclick = () => {
-    const next =
-      (modifiedData[day][index].Edad || "6-15") === "6-15" ? "16-30" : "6-15";
-    updateField(day, index, "Edad", next);
-    setEdadStyle(next);
+  const inputEdad = document.createElement("input");
+  inputEdad.type = "text";
+  inputEdad.className = "input-edad";
+  inputEdad.placeholder = "Edad";
+  inputEdad.value = row.Edad || "";
+  inputEdad.addEventListener("change", () => {
+    updateField(day, index, "Edad", inputEdad.value.trim());
     updateCounter();
-  };
-  tdEdad.appendChild(btnEdad);
+  });
+  tdEdad.appendChild(inputEdad);
   tr.appendChild(tdEdad);
 
   // ── Asistencia: Sí / No ──────────────────────────────────────────────────
@@ -553,7 +546,7 @@ function renderRow(tr, row, day, index, rowNum) {
 
   btnPair.append(btnSi, btnNo, btnVer, btnEditar);
 
-  // ── Select tipo: Normal / No CIDI / Extras ────────────────────────────────
+  // ── Select tipo: Normal / Tipo A / Tipo B ────────────────────────────────
   // Permite cambiar el tipo de un beneficiario ya añadido sin tener que eliminarlo
   const selTipo = document.createElement("select");
   selTipo.className = "sel-tipo-bebe";
@@ -562,8 +555,8 @@ function renderRow(tr, row, day, index, rowNum) {
     row.NoCidi === "Sí" ? "nocidi" : row.Extras === "Sí" ? "extras" : "normal";
   [
     { value: "normal", label: "Normal" },
-    { value: "nocidi", label: "No CIDI" },
-    { value: "extras", label: "Extras" },
+    { value: "nocidi", label: "Tipo B" },
+    { value: "extras", label: "Tipo A" },
   ].forEach(({ value, label }) => {
     const opt = document.createElement("option");
     opt.value = value;
@@ -739,11 +732,6 @@ function renderRow(tr, row, day, index, rowNum) {
       tr.className = getRowClass();
     } else {
       updateField(day, index, "Asistencia", "Sí");
-      // Si no tiene edad asignada, asignar 6-15 por defecto
-      if (!modifiedData[day][index].Edad) {
-        updateField(day, index, "Edad", "6-15");
-        setEdadStyle("6-15");
-      }
       btnSi.classList.add("active");
       btnNo.classList.remove("active");
       tr.className = getRowClass() || "present-row";
@@ -908,18 +896,6 @@ function updateCounter(subset) {
   const reported = data.filter((r) => r.Reporte === "Sí").length;
   const extras = data.filter((r) => r.Extras === "Sí").length;
   const noCidi = data.filter((r) => r.NoCidi === "Sí").length;
-  const edad1 = data.filter(
-    (r) => r.Asistencia === "Sí" && r.Edad === "6-15",
-  ).length;
-  const edad2 = data.filter(
-    (r) => r.Asistencia === "Sí" && r.Edad === "16-30",
-  ).length;
-  const rep1 = data.filter(
-    (r) => r.Reporte === "Sí" && r.Edad === "6-15",
-  ).length;
-  const rep2 = data.filter(
-    (r) => r.Reporte === "Sí" && r.Edad === "16-30",
-  ).length;
 
   // "Total" siempre muestra el total del día, no el filtrado
   document.getElementById("count-total").textContent = totalDia;
@@ -928,10 +904,6 @@ function updateCounter(subset) {
   document.getElementById("count-reported").textContent = reported;
   document.getElementById("count-extras").textContent = extras;
   document.getElementById("count-nocidi").textContent = noCidi;
-  document.getElementById("count-edad1").textContent = edad1;
-  document.getElementById("count-edad2").textContent = edad2;
-  document.getElementById("count-rep1").textContent = rep1;
-  document.getElementById("count-rep2").textContent = rep2;
   counterBar.style.display = totalDia > 0 ? "flex" : "none";
 }
 
@@ -972,7 +944,7 @@ function exportToExcel() {
   // Validar que sea un día hábil — en fin de semana apiDia sería undefined
   if (!apiDia) {
     alert(
-      `"${dayToExport}" no es un día hábil del CIDI.\n` +
+      `"${dayToExport}" no es un día hábil.\n` +
         `Solo se puede exportar de Lunes a Viernes.`,
     );
     return;
@@ -1207,9 +1179,9 @@ function addAddBabyButton() {
     // Mostrar modal de confirmación con resumen antes de agregar
     const tipo =
       newBaby.NoCidi === "Sí"
-        ? "No CIDI"
+        ? "Tipo B"
         : newBaby.Extras === "Sí"
-          ? "Extras"
+          ? "Tipo A"
           : "Normal";
     const resumen = [
       newBaby.Fase ? `Fase: ${newBaby.Fase}` : null,

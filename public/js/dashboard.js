@@ -1738,33 +1738,33 @@ function buildDashboardForFilter(filter) {
       break;
     }
 
-    // ── NO CIDI ──────────────────────────────────────────────
+    // ── TIPO B ──────────────────────────────────────────────
     case "nocidi": {
       if (!nNoCidi) {
-        showEmptyFilter("🟣 No CIDI");
+        showEmptyFilter("🟣 Tipo B");
         break;
       }
       buildViewHeader(
-        "🟣 No CIDI",
+        "🟣 Tipo B",
         nNoCidi,
         nTotal,
         "#8b5cf6",
-        `${nNoCidi} bebé(s) fuera del programa CIDI · incluidos en el total`,
+        `${nNoCidi} beneficiario(s) fuera del programa regular · incluidos en el total`,
       );
       if (hasDia)
-        buildChartBarFilter(nocidi, "día", "📅 No CIDI por día", "#8b5cf6");
+        buildChartBarFilter(nocidi, "día", "📅 Tipo B por día", "#8b5cf6");
       if (hasInst)
         buildChartBarFilter(
           nocidi,
           "institución",
-          "🏛 No CIDI por institución",
+          "🏛 Tipo B por institución",
           "#8b5cf6",
         );
       if (hasProg)
         buildChartBarFilter(
           nocidi,
           "programa",
-          "🎓 No CIDI por programa",
+          "🎓 Tipo B por programa",
           "#8b5cf6",
         );
       buildTabla(nocidi);
@@ -2371,7 +2371,7 @@ function buildChartEdad(data) {
 
 // Tabla de causas de ausencia (canonicaliza los valores para agrupar correctamente)
 const SIT_CANON = [
-  { key: "SANOS (CIDI)", patterns: ["sanos", "cidi"], color: VERDE },
+  { key: "SANOS", patterns: ["sanos", "cidi"], color: VERDE },
   { key: "IRA", patterns: ["ira", "gripe", "viral", "resfr"], color: AZUL },
   {
     key: "ALERGIAS",
@@ -4075,7 +4075,7 @@ function exportarTablaConsolidada() {
       key: "visitante",
       label: "TIPO",
       get: (r) =>
-        esSi(r.Visitante) ? "Extra" : esSi(r.NoCidi) ? "No CIDI" : "Programa",
+        esSi(r.Visitante) ? "Tipo A" : esSi(r.NoCidi) ? "Tipo B" : "Programa",
     },
   ];
 
@@ -4227,8 +4227,8 @@ function exportarTablaConsolidada() {
     ["Presentes:", nPresentes],
     ["Ausentes:", nAusentes],
     ["Con reporte:", nReportes],
-    ["Extras (visitantes):", nExtras],
-    ["No CIDI:", nNoCidi],
+    ["Tipo A (visitantes):", nExtras],
+    ["Tipo B:", nNoCidi],
     [
       "Tasa de asistencia:",
       consolidados.length

@@ -207,35 +207,55 @@ async function loadMasterDataFromServer() {
             NoCidi: "",
           }));
         } else {
-          const existentes = new Set(
-            modifiedData[dayName].map((r) => r.NombreBebe.trim().toLowerCase()),
+          const porNombre = new Map(
+            modifiedData[dayName].map((r) => [
+              r.NombreBebe.trim().toLowerCase(),
+              r,
+            ]),
           );
           rows.forEach((row) => {
             const nombre = (row["Nombre Bebe"] || row.NombreBebe || "").trim();
-            if (!nombre || existentes.has(nombre.toLowerCase())) return;
-            modifiedData[dayName].push({
-              NombreBebe: nombre,
-              NombreMadre: (
-                row["Nombre Madre"] ||
-                row.NombreMadre ||
-                ""
-              ).trim(),
-              Fase: (
-                row.Fase ||
-                row.Institucion ||
-                row.InstitucionMadre ||
-                ""
-              ).trim(),
-              ProgramaMadre: (row.Programa || row.ProgramaMadre || "").trim(),
-              Edad: normalizarEdad(row.Edad || row["Edad (meses)"] || ""),
-              Asistencia: "",
-              Ubicacion: "",
-              Reporte: "No",
-              SituacionEspecifica: "",
-              Nota: "",
-              Extras: "",
-              NoCidi: "",
-            });
+            if (!nombre) return;
+            const nombreMadre = (
+              row["Nombre Madre"] ||
+              row.NombreMadre ||
+              ""
+            ).trim();
+            const fase = (
+              row.Fase ||
+              row.Institucion ||
+              row.InstitucionMadre ||
+              ""
+            ).trim();
+            const programa = (row.Programa || row.ProgramaMadre || "").trim();
+            const edad = normalizarEdad(row.Edad || row["Edad (meses)"] || "");
+
+            const existente = porNombre.get(nombre.toLowerCase());
+            if (existente) {
+              // Ya estaba cacheado hoy — refrescamos SOLO los campos de
+              // catálogo (vienen de la BD y pueden haber cambiado), sin
+              // tocar lo que ya se marcó/editó en el día (Asistencia,
+              // Reporte, Nota, etc.)
+              existente.NombreMadre = nombreMadre;
+              existente.Fase = fase;
+              existente.ProgramaMadre = programa;
+              existente.Edad = edad;
+            } else {
+              modifiedData[dayName].push({
+                NombreBebe: nombre,
+                NombreMadre: nombreMadre,
+                Fase: fase,
+                ProgramaMadre: programa,
+                Edad: edad,
+                Asistencia: "",
+                Ubicacion: "",
+                Reporte: "No",
+                SituacionEspecifica: "",
+                Nota: "",
+                Extras: "",
+                NoCidi: "",
+              });
+            }
           });
         }
       });
@@ -440,10 +460,20 @@ function renderTable(day, data, searchTerm = "") {
 
   const table = document.createElement("table");
   table.innerHTML = `
+    <colgroup>
+      <col style="width:32px">
+      <col>
+      <col>
+      <col style="width:70px">
+      <col style="width:150px">
+      <col style="width:90px">
+      <col style="width:220px">
+      <col style="width:100px">
+    </colgroup>
     <thead>
       <tr>
-        <th>#</th><th>Nombre Beneficiario</th><th>Nombre Acudiente</th><th>Nivel</th>
-        <th>Programa</th><th>Edad</th><th>Asistencia</th><th>Tipo</th>
+        <th>#</th><th>Nombre Beneficiario</th><th>Nombre Acudiente</th><th class="th-center">Nivel</th>
+        <th class="th-center">Programa</th><th class="th-center">Edad</th><th class="th-center">Asistencia</th><th class="th-center">Tipo</th>
       </tr>
     </thead>
   `;
@@ -482,13 +512,14 @@ function renderRow(tr, row, day, index, rowNum) {
   const tdNum = document.createElement("td");
   tdNum.textContent = rowNum;
   tdNum.style.cssText =
-    "width:32px;text-align:center;font-size:11px;color:#888;font-weight:500;";
+    "text-align:center;font-size:11px;color:#888;font-weight:500;";
   tr.appendChild(tdNum);
 
   tr.innerHTML += `<td>${row.NombreBebe}</td><td>${row.NombreMadre}</td>`;
 
   // Fase — solo texto estático, viene de BD
   const tdFase = document.createElement("td");
+  tdFase.className = "td-center";
   tdFase.textContent = row.Fase || "—";
   tdFase.style.cssText = "font-size:13px; color:#2e7d32; font-weight:500;";
   tr.appendChild(tdFase);
@@ -496,12 +527,13 @@ function renderRow(tr, row, day, index, rowNum) {
   // Programa — solo badge estático, viene de BD
   const esTSFinicial = row.Fase === "TSF";
   const tdPrograma = document.createElement("td");
-  tdPrograma.style.cssText = "min-width:140px; width:140px;";
+  tdPrograma.className = "td-center";
   tdPrograma.innerHTML = badgePrograma(esTSFinicial ? "" : row.ProgramaMadre);
   tr.appendChild(tdPrograma);
 
   // Edad — campo de texto libre editable directo en la tabla
   const tdEdad = document.createElement("td");
+  tdEdad.className = "td-center";
   const inputEdad = document.createElement("input");
   inputEdad.type = "text";
   inputEdad.className = "input-edad";
@@ -516,7 +548,7 @@ function renderRow(tr, row, day, index, rowNum) {
 
   // ── Asistencia: Sí / No ──────────────────────────────────────────────────
   const tdAsis = document.createElement("td");
-  tdAsis.className = "td-asistencia";
+  tdAsis.className = "td-asistencia td-center";
   const btnPair = document.createElement("div");
   btnPair.className = "btn-pair";
 

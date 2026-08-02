@@ -802,17 +802,26 @@ tr.nocidi-row td:first-child {
   transform: scale(1.05);
 }
 
-/* ─── Botones Sí / No — minimalistas pill ─── */
+/* ─── Columnas Nivel/Programa/Edad/Asistencia/Tipo — mismo divisor y centrado ─── */
+.th-center,
+.td-center {
+  text-align: center;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+}
+td.td-center {
+  border-left: 1px solid #eee;
+}
+
 .td-asistencia {
   vertical-align: middle;
   white-space: nowrap;
-  width: 1%;
 }
 
 .btn-pair {
   display: flex;
   gap: 4px;
   align-items: center;
+  justify-content: center;
   flex-wrap: nowrap;
 }
 
@@ -861,12 +870,11 @@ tr.nocidi-row td:first-child {
 .td-tipo {
   vertical-align: middle;
   text-align: center;
-  width: 1%;
-  white-space: nowrap;
 }
 
 .sel-tipo-bebe {
-  padding: 5px 22px 5px 10px;
+  width: 90px;
+  padding: 5px 20px 5px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
@@ -875,6 +883,8 @@ tr.nocidi-row td:first-child {
   color: #888;
   cursor: pointer;
   font-family: inherit;
+  text-align: center;
+  text-align-last: center;
   transition:
     border-color 0.13s,
     color 0.13s,

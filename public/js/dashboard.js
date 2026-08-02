@@ -30,7 +30,6 @@
    ✓ updateKPIs usa solo _diasPresente (sin doble condición que sobrecontaba)
    ✓ buildDashboard eliminado (era redundante con buildDashboardForFilter)
    ✓ buildETLSection sin shadowing de la variable global allData
-   ✓ buildETLRanking agrupa por nombre+madre (no solo nombre)
    ✓ buildChartEdad maneja tanto valores numéricos como rangos "6-15" / "16-30"
    ✓ buildViewHeader calcula pct correctamente para todos los filtros
    ✓ Comentarios coherentes con el comportamiento real del código
@@ -401,104 +400,10 @@ const PALETTE = [
 ];
 
 // =============================================================================
-//  3. ALMACENAMIENTO — IndexedDB
-//  Permite guardar 20+ archivos Excel sin el límite de ~5MB de localStorage.
-//  localStorage solo guarda la lista de nombres (metadatos).
-// =============================================================================
-
-const LS_KEY = "asistencia_dash_v4_meta";
-const IDB_NAME = "asistencia_dash_v4";
-const IDB_STORE = "archivos";
-const IDB_VERSION = 2; // Incrementar aquí si se agregan nuevos stores en el futuro
-let _idb = null;
-
-/** Abre (o reutiliza) la conexión a IndexedDB */
-function openIDB() {
-  if (_idb) return Promise.resolve(_idb);
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      // Crear el store si no existe — esto corre tanto en instalación nueva
-      // como cuando se incrementa IDB_VERSION, sin romper datos existentes
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE, { keyPath: "name" });
-      }
-    };
-    req.onsuccess = (e) => {
-      _idb = e.target.result;
-      res(_idb);
-    };
-    req.onerror = () => rej(req.error);
-  });
-}
-
-/** Guarda los bytes de un archivo en IDB y su nombre en localStorage */
-async function saveFileIDB(name, bytes) {
-  try {
-    const db = await openIDB();
-    db.transaction(IDB_STORE, "readwrite")
-      .objectStore(IDB_STORE)
-      .put({ name, bytes });
-    const meta = getFileMeta();
-    if (!meta.find((m) => m.name === name)) {
-      meta.push({ name });
-      localStorage.setItem(LS_KEY, JSON.stringify(meta));
-    }
-  } catch (e) {
-    console.warn("[IDB] saveFileIDB:", e);
-  }
-}
-
-/** Elimina un archivo de IDB y de los metadatos */
-async function removeFileIDB(name) {
-  try {
-    const db = await openIDB();
-    db.transaction(IDB_STORE, "readwrite").objectStore(IDB_STORE).delete(name);
-    localStorage.setItem(
-      LS_KEY,
-      JSON.stringify(getFileMeta().filter((m) => m.name !== name)),
-    );
-  } catch (e) {}
-}
-
-/** Lee los bytes de un archivo desde IDB */
-function readFileIDB(db, name) {
-  return new Promise((res, rej) => {
-    const req = db
-      .transaction(IDB_STORE, "readonly")
-      .objectStore(IDB_STORE)
-      .get(name);
-    req.onsuccess = () => res(req.result?.bytes || null);
-    req.onerror = () => rej(req.error);
-  });
-}
-
-/** Devuelve los metadatos guardados en localStorage */
-function getFileMeta() {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-/** Limpia IDB y localStorage completamente */
-async function clearAllStorage() {
-  localStorage.removeItem(LS_KEY);
-  try {
-    const db = await openIDB();
-    db.transaction(IDB_STORE, "readwrite").objectStore(IDB_STORE).clear();
-  } catch {}
-}
-
-// =============================================================================
 //  4. UPLOAD Y GESTIÓN DE ARCHIVOS
 // =============================================================================
 
 // Referencias DOM
-const fileInput = document.getElementById("fileInput");
-const btnUpload = document.getElementById("btnUpload"); // puede ser null en modo Supabase
 const toastEl = document.getElementById("toast");
 const loadingEl = document.getElementById("loading");
 const emptyState = document.getElementById("emptyState");
@@ -523,8 +428,6 @@ function fechaLocalHoy() {
 // La inicialización ya NO corre aquí automáticamente.
 // El script inline de dashboard.html llama initDashboard() DESPUÉS de requireAuth().
 function initDashboard() {
-  fileInput.setAttribute("multiple", "true");
-  setupUpload();
   setupFilters();
   setupBabySearch();
   setupSupabaseLoader();
@@ -535,14 +438,10 @@ function initDashboard() {
     .getElementById("btnClearSession")
     ?.addEventListener("click", clearSession);
 
-  // Orden de restauración:
-  // 1. Si hay un rango de fechas guardado → carga desde Supabase (prioridad)
-  // 2. Si no hay rango pero hay Excels en IndexedDB → restaura los archivos manuales
-  const tieneRango = !!localStorage.getItem(LS_RANGO_KEY);
-  if (tieneRango) {
+  // Si hay un rango de fechas guardado de una sesión anterior, lo restauramos
+  // consultando Supabase de nuevo automáticamente.
+  if (localStorage.getItem(LS_RANGO_KEY)) {
     restaurarUltimoRango();
-  } else {
-    restoreSession();
   }
 }
 
@@ -726,138 +625,10 @@ async function restaurarUltimoRango() {
   }
 }
 
-function setupUpload() {
-  // btnUpload puede no existir si se usa el modo Supabase
-  if (btnUpload) {
-    btnUpload.addEventListener("click", (e) => {
-      e.stopPropagation();
-      fileInput.click();
-    });
-  }
-
-  // Click en la zona de carga (evitar disparar si se hizo clic en el estado "cargado")
-  if (uploadZone)
-    uploadZone.addEventListener("click", (e) => {
-      if (e.target.closest("#fileLoaded")) return;
-      if (e.target.closest("#supabasePrompt")) return; // no abrir file picker al clickear el prompt
-      fileInput.click();
-    });
-
-  fileInput.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length) processFiles(files);
-    fileInput.value = "";
-  });
-
-  // Drag & drop
-  if (uploadZone)
-    uploadZone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      uploadZone.classList.add("dragover");
-    });
-  if (uploadZone)
-    uploadZone.addEventListener("dragleave", () =>
-      uploadZone.classList.remove("dragover"),
-    );
-  if (uploadZone)
-    uploadZone.addEventListener("drop", (e) => {
-      e.preventDefault();
-      uploadZone.classList.remove("dragover");
-      const files = Array.from(e.dataTransfer.files).filter((f) =>
-        /\.(xlsx|xls|csv)$/i.test(f.name),
-      );
-      if (files.length) processFiles(files);
-    });
-}
-
-/**
- * Procesa un array de archivos File de forma secuencial y asíncrona.
- * Actualiza el spinner con progreso para no bloquear la UI con 20+ archivos.
- */
-async function processFiles(files) {
-  showLoading(true);
-  const resultsBatch = [];
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    updateLoadingText(`Procesando ${i + 1}/${files.length}: ${file.name}`);
-    await yieldToUI();
-
-    try {
-      const bytes = await readFileAsUint8(file);
-      const wb = XLSX.read(bytes, { type: "array" });
-      let rowCount = 0;
-
-      for (const shName of wb.SheetNames) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[shName], {
-          defval: "",
-        });
-        if (rows.length > 0) {
-          rowCount += rows.length;
-          resultsBatch.push({ rows, fileName: file.name });
-        }
-      }
-
-      // Guardar solo si no estaba ya en sesión
-      if (!loadedFiles.find((lf) => lf.name === file.name)) {
-        loadedFiles.push({
-          name: file.name,
-          sheetCount: wb.SheetNames.length,
-          rowCount,
-        });
-      }
-      saveFileIDB(file.name, bytes); // asíncrono, no bloqueante
-    } catch {
-      showToast(`No se pudo leer "${file.name}"`, true);
-    }
-  }
-
-  finishLoad(resultsBatch);
-}
-
-/** Lee un File → Uint8Array (promisificado) */
-function readFileAsUint8(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = (e) => res(new Uint8Array(e.target.result));
-    r.onerror = () => rej(r.error);
-    r.readAsArrayBuffer(file);
-  });
-}
-
-/** Cede el control al navegador por un frame (evita UI congelada) */
-function yieldToUI() {
-  return new Promise((r) => setTimeout(r, 0));
-}
-
 /** Actualiza el texto del spinner */
 function updateLoadingText(text) {
   const el = document.querySelector(".loading-text");
   if (el) el.textContent = text;
-}
-
-/**
- * finishLoad: punto de entrada único al modelo de datos.
- * Todos los archivos pasan por UnifiedModel.ingest() antes de renderizar.
- */
-function finishLoad(resultsBatch) {
-  for (const { rows, fileName } of resultsBatch) {
-    UnifiedModel.ingest(rows, fileName);
-  }
-
-  // allData se obtiene SIEMPRE desde el modelo — nunca se manipula directamente
-  allData = UnifiedModel.getAll();
-  headers = CANONICAL_HEADERS;
-
-  showLoading(false);
-  buildFileChips();
-  showUI();
-  rebuildAll();
-
-  const meta = UnifiedModel.getMeta();
-  showToast(
-    `${loadedFiles.length} archivo(s) · ${meta.bebesUnicos} bebés · ${meta.registros} registros`,
-  );
 }
 
 /** Construye los chips de archivos cargados */
@@ -871,101 +642,17 @@ function buildFileChips() {
       <span class="file-chip-icon">📄</span>
       <span class="file-chip-name">${f.name}</span>
       <span class="file-chip-rows">${f.rowCount} filas</span>
-      <button class="file-chip-remove" data-name="${f.name}" title="Quitar">✕</button>
     `;
-    chip.querySelector(".file-chip-remove").addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeFile(f.name);
-    });
     container.appendChild(chip);
   }
   sheetRow.classList.add("show");
 }
 
 /** Quita un archivo de la sesión y re-ingesta los restantes */
-function removeFile(name) {
-  loadedFiles = loadedFiles.filter((f) => f.name !== name);
-  removeFileIDB(name);
-  UnifiedModel.clear();
-  allData = [];
-  headers = [];
-
-  if (loadedFiles.length === 0) {
-    clearSession();
-    return;
-  }
-
-  // Re-ingestar desde IDB los archivos que quedan
-  openIDB().then(async (db) => {
-    const resultsBatch = [];
-    for (const lf of loadedFiles) {
-      try {
-        const bytes = await readFileIDB(db, lf.name);
-        if (!bytes) continue;
-        const wb = XLSX.read(bytes, { type: "array" });
-        for (const shName of wb.SheetNames) {
-          const rows = XLSX.utils.sheet_to_json(wb.Sheets[shName], {
-            defval: "",
-          });
-          if (rows.length > 0) resultsBatch.push({ rows, fileName: lf.name });
-        }
-      } catch {}
-    }
-    finishLoad(resultsBatch);
-  });
-}
-
-/** Restaura la sesión desde IDB al recargar la página */
-async function restoreSession() {
-  const meta = getFileMeta();
-  if (!meta.length) return;
-  showLoading(true);
-  updateLoadingText("Restaurando sesión...");
-  try {
-    const db = await openIDB();
-    const resultsBatch = [];
-    for (let i = 0; i < meta.length; i++) {
-      const { name } = meta[i];
-      updateLoadingText(`Restaurando ${i + 1}/${meta.length}...`);
-      await yieldToUI();
-      try {
-        const bytes = await readFileIDB(db, name);
-        if (!bytes) {
-          await removeFileIDB(name);
-          continue;
-        }
-        const wb = XLSX.read(bytes, { type: "array" });
-        let rowCount = 0;
-        for (const shName of wb.SheetNames) {
-          const rows = XLSX.utils.sheet_to_json(wb.Sheets[shName], {
-            defval: "",
-          });
-          if (rows.length > 0) {
-            rowCount += rows.length;
-            resultsBatch.push({ rows, fileName: name });
-          }
-        }
-        if (!loadedFiles.find((lf) => lf.name === name))
-          loadedFiles.push({
-            name,
-            sheetCount: wb.SheetNames.length,
-            rowCount,
-          });
-      } catch {
-        await removeFileIDB(name);
-      }
-    }
-    if (resultsBatch.length) finishLoad(resultsBatch);
-  } catch (e) {
-    console.warn("[IDB] restoreSession:", e);
-  }
-  showLoading(false);
-}
 
 /** Limpia toda la sesión */
 function clearSession() {
   localStorage.removeItem(LS_RANGO_KEY);
-  clearAllStorage();
   UnifiedModel.clear();
   allData = [];
   headers = [];
@@ -1008,7 +695,6 @@ function clearSession() {
   document
     .querySelectorAll(".filter-btn")
     .forEach((b) => b.classList.toggle("active", b.dataset.filter === "todos"));
-  fileInput.value = "";
 }
 
 // =============================================================================
@@ -1566,10 +1252,6 @@ function buildDashboardForFilter(filter) {
       if (hasInst) buildChartInstitucion(registros);
       if (hasProg) buildChartPrograma(registros);
       if (hasEdad) buildChartEdad(resumen);
-      if (hasSit && hasRep)
-        buildCollapsible("causas", "⚠️ Causas de ausencia reportadas", () =>
-          buildChartCausas(registros),
-        );
       buildSeccionReportes(registros);
       buildETLSection(registros, resumen);
       buildTabla(registros);
@@ -1666,10 +1348,6 @@ function buildDashboardForFilter(filter) {
           "🍼 Por rango de edad",
           "#ef4444",
         );
-      if (hasSit && hasRep)
-        buildCollapsible("causas-aus", "⚠️ Causas de ausencia", () =>
-          buildChartCausas(ausentes),
-        );
       buildTabla(ausentes);
       break;
     }
@@ -1687,7 +1365,6 @@ function buildDashboardForFilter(filter) {
         "#f97316",
         `${nReportes} de ${nTotal} bebés tienen al menos un reporte`,
       );
-      if (hasSit) buildChartCausasDirecto(reportados);
       if (hasDia)
         buildChartBarFilter(
           reportados,
@@ -2403,146 +2080,6 @@ const SIT_CANON = [
   },
 ];
 
-function canonizarSituacion(raw) {
-  const n = norm(raw);
-  for (const c of SIT_CANON) {
-    if (c.patterns.some((p) => n.includes(p))) return c.key;
-  }
-  return raw.trim() ? "OTROS" : null;
-}
-
-/** Causas de ausencia en un colapsable (vista Todos) */
-function buildChartCausas(data) {
-  const cSit = colKey("situacion");
-  const body = document.getElementById("collapsible-body-causas");
-  if (!cSit || !body) return;
-
-  const counts = {};
-  data
-    .filter((r) => esSi(val(r, "reporte")))
-    .forEach((r) => {
-      const canon = canonizarSituacion(String(r[cSit] || "").trim()) || "OTROS";
-      counts[canon] = (counts[canon] || 0) + 1;
-    });
-  const entries = SIT_CANON.filter((c) => counts[c.key] > 0).sort(
-    (a, b) => counts[b.key] - counts[a.key],
-  );
-  if (!entries.length) {
-    body.innerHTML =
-      '<p style="padding:16px;color:var(--muted)">Sin reportes en este período.</p>';
-    return;
-  }
-  const h = Math.max(320, entries.length * 52 + 60);
-  body.innerHTML = `<div class="chart-wrap" style="height:${h}px"><canvas id="chart-causas"></canvas></div>`;
-  charts["chart-causas"] = new Chart(
-    document.getElementById("chart-causas").getContext("2d"),
-    {
-      type: "bar",
-      data: {
-        labels: entries.map((c) => c.key),
-        datasets: [
-          {
-            data: entries.map((c) => counts[c.key]),
-            backgroundColor: entries.map((c) => c.color + "cc"),
-            borderColor: entries.map((c) => c.color),
-            borderWidth: 1.5,
-            borderRadius: 5,
-            borderSkipped: false,
-          },
-        ],
-      },
-      options: {
-        ...chartOpts(false),
-        indexAxis: "y",
-        plugins: {
-          ...chartOpts(false).plugins,
-          legend: { display: false },
-          tooltip: {
-            ...chartOpts(false).plugins.tooltip,
-            callbacks: { label: (ctx) => `  ${ctx.label}: ${ctx.parsed.x}` },
-          },
-        },
-        scales: {
-          ...chartOpts(false).scales,
-          x: {
-            ...chartOpts(false).scales.x,
-            ticks: { ...chartOpts(false).scales.x.ticks, stepSize: 1 },
-          },
-        },
-      },
-    },
-  );
-}
-
-/** Causas de ausencia directo (sin colapsable, vista Reportados) */
-function buildChartCausasDirecto(data) {
-  const cSit = colKey("situacion");
-  if (!cSit) return;
-  // total = TODOS los registros con reporte, incluidos extras y no-cidi
-  const totalReportes = data.filter((r) => esSi(val(r, "reporte"))).length;
-  const counts = {};
-  data
-    .filter((r) => esSi(val(r, "reporte")))
-    .forEach((r) => {
-      // || "OTROS" garantiza que ningun reporte se pierda del conteo
-      const canon = canonizarSituacion(String(r[cSit] || "").trim()) || "OTROS";
-      counts[canon] = (counts[canon] || 0) + 1;
-    });
-  const entries = SIT_CANON.filter((c) => counts[c.key] > 0).sort(
-    (a, b) => counts[b.key] - counts[a.key],
-  );
-  if (!entries.length) return;
-  // Badge muestra el total real, no solo los que matchearon un patrón
-  const total = totalReportes;
-  const h = Math.max(280, entries.length * 52 + 60);
-  const card = createCard(
-    "chart-causas-dir",
-    "⚠️ Causas de ausencia",
-    "col-12",
-    `${total} reportes`,
-    h,
-  );
-  dashGrid.appendChild(card);
-  charts["chart-causas-dir"] = new Chart(
-    document.getElementById("chart-causas-dir").getContext("2d"),
-    {
-      type: "bar",
-      data: {
-        labels: entries.map((c) => c.key),
-        datasets: [
-          {
-            data: entries.map((c) => counts[c.key]),
-            backgroundColor: entries.map((c) => c.color + "cc"),
-            borderColor: entries.map((c) => c.color),
-            borderWidth: 1.5,
-            borderRadius: 5,
-            borderSkipped: false,
-          },
-        ],
-      },
-      options: {
-        ...chartOpts(false),
-        indexAxis: "y",
-        plugins: {
-          ...chartOpts(false).plugins,
-          legend: { display: false },
-          tooltip: {
-            ...chartOpts(false).plugins.tooltip,
-            callbacks: { label: (ctx) => `  ${ctx.label}: ${ctx.parsed.x}` },
-          },
-        },
-        scales: {
-          ...chartOpts(false).scales,
-          x: {
-            ...chartOpts(false).scales.x,
-            ticks: { ...chartOpts(false).scales.x.ticks, stepSize: 1 },
-          },
-        },
-      },
-    },
-  );
-}
-
 /** Gráfico de barras horizontal genérico para vistas filtradas */
 function buildChartBarFilter(data, campo, titulo, color) {
   const campoKey =
@@ -2853,548 +2390,11 @@ function buildETLSection(registros, resumen) {
   sep.style.cssText =
     "background:linear-gradient(90deg,rgba(133,218,26,.08) 0%,transparent 100%);border-left:4px solid var(--green);padding:18px 28px;margin:8px 0 4px;";
   sep.innerHTML = `
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--green-dark);text-transform:uppercase;margin-bottom:4px">📊 Análisis ETL</div>
-    <div style="font-size:15px;font-weight:700;color:var(--text)">Tendencia · Ranking · Comparación · Alertas de riesgo</div>`;
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--green-dark);text-transform:uppercase;margin-bottom:4px">📊 Análisis</div>
+    <div style="font-size:15px;font-weight:700;color:var(--text)">Alertas de riesgo</div>`;
   dashGrid.appendChild(sep);
 
-  buildETLTendencia(registros);
-  buildETLToggle(
-    "etl-ranking",
-    "🏆",
-    "Ranking",
-    "Bebés con más ausencias",
-    "#3b82f6",
-    "#dbeafe",
-    "#bfdbfe",
-    (body) => buildETLRanking(registros, body),
-  );
-  buildETLToggle(
-    "etl-comparacion",
-    "📆",
-    "Comparación por período",
-    "Asistencia por fecha o día de semana",
-    "#8b5cf6",
-    "#ede9fe",
-    "#ddd6fe",
-    (body) => buildETLComparacion(registros, body),
-  );
   buildETLAlertas(registros, resumen);
-}
-
-// ---------------------------------------------------------------------------
-//  Utilidades de fecha para el ETL
-// ---------------------------------------------------------------------------
-
-/**
- * parseFechaRobusta(str) → "YYYY-MM-DD" | null
- * Soporta: DD/MM/YYYY · YYYY-MM-DD · DD-MM-YYYY · serial Excel · "15 de enero 2025" · ISO
- */
-function parseFechaRobusta(str) {
-  if (!str && str !== 0) return null;
-  const s = String(str).trim();
-
-  // Serial numérico de Excel (aprox. años 2009–2050)
-  const serial = parseFloat(s);
-  if (!isNaN(serial) && serial > 40000 && serial < 55000) {
-    const d = new Date(Math.round((serial - 25569) * 86400000));
-    if (!isNaN(d)) return d.toISOString().slice(0, 10);
-  }
-  // YYYY-MM-DD
-  let m = s.match(/^(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})$/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  // DD/MM/YYYY o DD-MM-YYYY (Colombia: asumir día/mes)
-  m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  // "15 de enero de 2025"
-  const MESES = {
-    enero: 1,
-    febrero: 2,
-    marzo: 3,
-    abril: 4,
-    mayo: 5,
-    junio: 6,
-    julio: 7,
-    agosto: 8,
-    septiembre: 9,
-    octubre: 10,
-    noviembre: 11,
-    diciembre: 12,
-  };
-  m = s.toLowerCase().match(/(\d{1,2})\s+de\s+(\w+)(?:\s+de)?\s+(\d{4})/);
-  if (m && MESES[m[2]])
-    return `${m[3]}-${String(MESES[m[2]]).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  // ISO timestamp
-  m = s.match(/^(\d{4}-\d{2}-\d{2})T/);
-  if (m) return m[1];
-  return null;
-}
-
-/** Devuelve la semana ISO de una fecha "YYYY-MM-DD" → "2025-S15" */
-function semanaISO(fechaStr) {
-  const d = new Date(fechaStr + "T12:00:00");
-  if (isNaN(d)) return null;
-  const jan4 = new Date(d.getFullYear(), 0, 4);
-  const ini = new Date(jan4);
-  ini.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
-  const semana = Math.floor(1 + (d - ini) / (7 * 86400000));
-  return `${d.getFullYear()}-S${String(semana).padStart(2, "0")}`;
-}
-
-/**
- * buildETLToggle — header con botón Mostrar/Ocultar igual que Alertas de riesgo.
- * Renderiza el contenido bajo demanda (lazy) al abrir por primera vez.
- */
-function buildETLToggle(
-  id,
-  icono,
-  titulo,
-  subtitulo,
-  color,
-  bgSoft,
-  border,
-  renderFn,
-) {
-  const card = document.createElement("div");
-  card.className = "card col-12";
-  card.style.cssText = `border:1px solid ${border};border-top:3px solid ${color};overflow:hidden;`;
-
-  card.innerHTML = `
-    <div id="${id}-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;cursor:pointer;background:linear-gradient(135deg,${bgSoft} 0%,#fff 100%);border-bottom:1px solid ${border};user-select:none;">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="width:32px;height:32px;border-radius:8px;background:${bgSoft};border:1.5px solid ${border};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icono}</div>
-        <div>
-          <div style="font-weight:800;font-size:14px;color:${color}">${titulo}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#a0aec0;text-transform:uppercase">${subtitulo}</div>
-        </div>
-      </div>
-      <button id="${id}-toggle-btn" style="display:flex;align-items:center;gap:7px;padding:7px 16px;border-radius:8px;cursor:pointer;border:1.5px solid ${border};background:white;color:${color};font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;white-space:nowrap"
-        onmouseover="this.style.background='${bgSoft}'" onmouseout="this.style.background='white'">
-        <span id="${id}-arrow" style="transition:transform .25s">▼</span>
-        <span id="${id}-text">Mostrar</span>
-      </button>
-    </div>
-    <div id="${id}-body" style="padding:20px 22px 16px;display:none;background:#fafafa;"></div>`;
-
-  dashGrid.appendChild(card);
-
-  let abierto = false;
-  let rendered = false;
-  const body = card.querySelector(`#${id}-body`);
-  const arrow = card.querySelector(`#${id}-arrow`);
-  const textBtn = card.querySelector(`#${id}-text`);
-
-  card.querySelector(`#${id}-header`).addEventListener("click", () => {
-    abierto = !abierto;
-    body.style.display = abierto ? "block" : "none";
-    arrow.style.transform = abierto ? "rotate(180deg)" : "rotate(0deg)";
-    textBtn.textContent = abierto ? "Ocultar" : "Mostrar";
-
-    // Renderizar contenido solo la primera vez (lazy)
-    if (abierto && !rendered) {
-      rendered = true;
-      renderFn(body);
-    }
-  });
-}
-
-/** Tendencia de asistencia en el tiempo */
-function buildETLTendencia(data) {
-  const fechasRaw = data.map((r) => val(r, "fecha")).filter(Boolean);
-  const diasRaw = data.map((r) => val(r, "dia")).filter(Boolean);
-  const porPeriodo = {};
-
-  if (fechasRaw.length > 0) {
-    const fechasValidas = [
-      ...new Set(fechasRaw.map(parseFechaRobusta).filter(Boolean)),
-    ];
-    const gran =
-      fechasValidas.length <= 20
-        ? "dia"
-        : fechasValidas.length <= 90
-          ? "semana"
-          : "mes";
-    data.forEach((r) => {
-      const p = parseFechaRobusta(val(r, "fecha"));
-      if (!p) return;
-      const key =
-        gran === "semana"
-          ? semanaISO(p) || p
-          : gran === "mes"
-            ? p.slice(0, 7)
-            : p;
-      if (!porPeriodo[key]) porPeriodo[key] = { total: 0, presentes: 0 };
-      porPeriodo[key].total++;
-      if (esSi(val(r, "asistencia"))) porPeriodo[key].presentes++;
-    });
-  } else if (diasRaw.length > 0) {
-    const DIAS_ORD = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-    data.forEach((r) => {
-      const d = val(r, "dia");
-      if (!d) return;
-      if (!porPeriodo[d]) porPeriodo[d] = { total: 0, presentes: 0 };
-      porPeriodo[d].total++;
-      if (esSi(val(r, "asistencia"))) porPeriodo[d].presentes++;
-    });
-    // Ordenar por día de semana
-    const orden = [
-      "lunes",
-      "martes",
-      "miercoles",
-      "miércoles",
-      "jueves",
-      "viernes",
-    ];
-    Object.keys(porPeriodo)
-      .sort((a, b) => {
-        const ia = orden.indexOf(norm(a)),
-          ib = orden.indexOf(norm(b));
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-      })
-      .forEach((k) => {
-        const v = porPeriodo[k];
-        delete porPeriodo[k];
-        porPeriodo[k] = v;
-      });
-  }
-
-  const periodos = Object.keys(porPeriodo).sort((a, b) => {
-    const DIAS = [
-      "lunes",
-      "martes",
-      "miercoles",
-      "miércoles",
-      "jueves",
-      "viernes",
-    ];
-    const ia = DIAS.indexOf(norm(a)),
-      ib = DIAS.indexOf(norm(b));
-    if (ia >= 0 && ib >= 0) return ia - ib;
-    return a.localeCompare(b);
-  });
-  if (periodos.length < 2) return;
-
-  const tasas = periodos.map((p) =>
-    porPeriodo[p].total
-      ? Math.round((porPeriodo[p].presentes / porPeriodo[p].total) * 100)
-      : 0,
-  );
-  const totals = periodos.map((p) => porPeriodo[p].total);
-  const h = Math.min(Math.max(260, periodos.length * 30 + 80), 360);
-  const card = createCard(
-    "chart-etl-tendencia",
-    "📈 Tendencia de asistencia",
-    "col-12",
-    `${periodos.length} períodos`,
-    h,
-  );
-  dashGrid.appendChild(card);
-  charts["chart-etl-tendencia"] = new Chart(
-    document.getElementById("chart-etl-tendencia").getContext("2d"),
-    {
-      type: "line",
-      data: {
-        labels: periodos,
-        datasets: [
-          {
-            label: "% Asistencia",
-            data: tasas,
-            borderColor: VERDE,
-            backgroundColor: VERDE + "22",
-            borderWidth: 2.5,
-            pointBackgroundColor: tasas.map((t) =>
-              t >= 80 ? VERDE : t >= 60 ? NARANJA : ROJO,
-            ),
-            pointBorderColor: "#fff",
-            pointRadius: 6,
-            tension: 0.35,
-            fill: true,
-            yAxisID: "yPct",
-          },
-          {
-            label: "Total registros",
-            data: totals,
-            borderColor: AZUL + "88",
-            backgroundColor: "transparent",
-            borderWidth: 1.5,
-            borderDash: [5, 4],
-            pointRadius: 3,
-            tension: 0.3,
-            yAxisID: "yTotal",
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 500 },
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: {
-            labels: {
-              color: "#8ba869",
-              font: { family: "JetBrains Mono", size: 11 },
-              padding: 14,
-              boxWidth: 10,
-            },
-          },
-          tooltip: {
-            backgroundColor: "#fff",
-            titleColor: "#1a2e05",
-            bodyColor: "#555",
-            borderColor: "#e0eccc",
-            borderWidth: 1,
-            padding: 12,
-            callbacks: {
-              label: (ctx) =>
-                ctx.datasetIndex === 0
-                  ? `  Asistencia: ${ctx.parsed.y}%`
-                  : `  Total: ${ctx.parsed.y} registros`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            ticks: {
-              color: "#8ba869",
-              font: { family: "JetBrains Mono", size: 10 },
-              maxRotation: 35,
-            },
-            grid: { color: "rgba(133,218,26,.07)" },
-            border: { color: "#e0eccc" },
-          },
-          yPct: {
-            type: "linear",
-            position: "left",
-            min: 0,
-            max: 100,
-            ticks: {
-              color: VERDE,
-              font: { family: "JetBrains Mono", size: 10 },
-              callback: (v) => v + "%",
-            },
-            grid: { color: "rgba(133,218,26,.07)" },
-            border: { color: "#e0eccc" },
-          },
-          yTotal: {
-            type: "linear",
-            position: "right",
-            beginAtZero: true,
-            ticks: {
-              color: AZUL + "99",
-              font: { family: "JetBrains Mono", size: 10 },
-            },
-            grid: { drawOnChartArea: false },
-            border: { color: "transparent" },
-          },
-        },
-      },
-    },
-  );
-}
-
-/**
- * Ranking de bebés con más ausencias.
- * Agrupa por nombre+madre para distinguir homónimos correctamente.
- */
-function buildETLRanking(data, body) {
-  if (!body) return;
-
-  // Clave = nombre + madre para distinguir homónimos
-  const statsMap = new Map();
-  data.forEach((r) => {
-    const nombre = val(r, "bebe");
-    if (!nombre) return;
-    const key = nombre + "|" + (val(r, "madre") || "");
-    if (!statsMap.has(key))
-      statsMap.set(key, { nombre, total: 0, ausencias: 0 });
-    const s = statsMap.get(key);
-    s.total++;
-    if (!esSi(val(r, "asistencia"))) s.ausencias++;
-  });
-
-  const ranking = Array.from(statsMap.values())
-    .filter((s) => s.ausencias > 0)
-    .map((s) => ({
-      ...s,
-      tasa: Math.round(((s.total - s.ausencias) / s.total) * 100),
-    }))
-    .sort((a, b) => b.ausencias - a.ausencias)
-    .slice(0, 15);
-
-  if (!ranking.length) {
-    body.innerHTML =
-      '<p style="padding:16px;color:var(--muted)">Sin ausencias.</p>';
-    return;
-  }
-  const h = Math.max(300, ranking.length * 44 + 60);
-  body.innerHTML = `<div class="chart-wrap" style="height:${h}px"><canvas id="chart-etl-ranking"></canvas></div>`;
-  charts["chart-etl-ranking"] = new Chart(
-    document.getElementById("chart-etl-ranking").getContext("2d"),
-    {
-      type: "bar",
-      data: {
-        labels: ranking.map((d) => d.nombre.split(" ").slice(0, 2).join(" ")),
-        datasets: [
-          {
-            label: "Ausencias",
-            data: ranking.map((d) => d.ausencias),
-            backgroundColor: ranking.map((d) =>
-              d.tasa < 60
-                ? ROJO + "dd"
-                : d.tasa < 80
-                  ? NARANJA + "dd"
-                  : VERDE + "dd",
-            ),
-            borderColor: ranking.map((d) =>
-              d.tasa < 60 ? ROJO : d.tasa < 80 ? NARANJA : VERDE,
-            ),
-            borderWidth: 1.5,
-            borderRadius: 5,
-            borderSkipped: false,
-          },
-        ],
-      },
-      options: {
-        ...chartOpts(false),
-        indexAxis: "y",
-        plugins: {
-          ...chartOpts(false).plugins,
-          legend: { display: false },
-          tooltip: {
-            ...chartOpts(false).plugins.tooltip,
-            callbacks: {
-              title: (ctx) => ranking[ctx[0].dataIndex]?.nombre || ctx[0].label,
-              label: (ctx) => {
-                const d = ranking[ctx.dataIndex];
-                return [
-                  `  Ausencias: ${d.ausencias} de ${d.total}`,
-                  `  Tasa: ${d.tasa}%`,
-                ];
-              },
-            },
-          },
-        },
-        scales: {
-          ...chartOpts(false).scales,
-          x: {
-            ...chartOpts(false).scales.x,
-            ticks: { ...chartOpts(false).scales.x.ticks, stepSize: 1 },
-          },
-        },
-      },
-    },
-  );
-}
-
-/** Comparación de asistencia por período (semana/mes/día) */
-function buildETLComparacion(data, body) {
-  if (!body) return;
-
-  const fechasRaw = data.map((r) => val(r, "fecha")).filter(Boolean);
-  const diasRaw = data.map((r) => val(r, "dia")).filter(Boolean);
-  let grupos = {};
-
-  if (fechasRaw.length > 0) {
-    const fechasValidas = [
-      ...new Set(fechasRaw.map(parseFechaRobusta).filter(Boolean)),
-    ];
-    const usarMes = fechasValidas.length >= 60;
-    const usarSemana = !usarMes && fechasValidas.length >= 5;
-    data.forEach((r) => {
-      const p = parseFechaRobusta(val(r, "fecha"));
-      if (!p) return;
-      const key = usarMes
-        ? p.slice(0, 7)
-        : usarSemana
-          ? semanaISO(p) || p.slice(0, 7)
-          : p;
-      if (!grupos[key]) grupos[key] = { total: 0, presentes: 0 };
-      grupos[key].total++;
-      if (esSi(val(r, "asistencia"))) grupos[key].presentes++;
-    });
-    grupos = Object.fromEntries(
-      Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b)),
-    );
-  } else if (diasRaw.length > 0) {
-    const DIAS_ORD = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-    data.forEach((r) => {
-      const d = val(r, "dia");
-      if (!d) return;
-      if (!grupos[d]) grupos[d] = { total: 0, presentes: 0 };
-      grupos[d].total++;
-      if (esSi(val(r, "asistencia"))) grupos[d].presentes++;
-    });
-    const ord = {};
-    DIAS_ORD.forEach((d) => {
-      if (grupos[d]) ord[d] = grupos[d];
-    });
-    Object.keys(grupos).forEach((d) => {
-      if (!ord[d]) ord[d] = grupos[d];
-    });
-    grupos = ord;
-  }
-
-  const periodos = Object.keys(grupos);
-  if (periodos.length < 2) {
-    body.innerHTML =
-      '<p style="padding:16px;color:var(--muted)">Se necesitan al menos 2 períodos para comparar. Carga más archivos Excel.</p>';
-    return;
-  }
-
-  const h = Math.max(280, periodos.length * 38 + 80);
-  body.innerHTML = `<div class="chart-wrap" style="height:${h}px"><canvas id="chart-etl-comparacion"></canvas></div>`;
-  const tasas = periodos.map((p) =>
-    grupos[p].total
-      ? Math.round((grupos[p].presentes / grupos[p].total) * 100)
-      : 0,
-  );
-  charts["chart-etl-comparacion"] = new Chart(
-    document.getElementById("chart-etl-comparacion").getContext("2d"),
-    {
-      type: "bar",
-      data: {
-        labels: periodos,
-        datasets: [
-          {
-            label: "Presentes",
-            data: periodos.map((p) => grupos[p].presentes),
-            backgroundColor: VERDE + "cc",
-            borderRadius: 5,
-            borderSkipped: false,
-          },
-          {
-            label: "Ausentes",
-            data: periodos.map((p) => grupos[p].total - grupos[p].presentes),
-            backgroundColor: ROJO + "99",
-            borderRadius: 5,
-            borderSkipped: false,
-          },
-        ],
-      },
-      options: {
-        ...chartOpts(false),
-        plugins: {
-          ...chartOpts(false).plugins,
-          tooltip: {
-            ...chartOpts(false).plugins.tooltip,
-            callbacks: {
-              afterBody: (ctx) =>
-                ctx.length ? [`  Tasa: ${tasas[ctx[0].dataIndex]}%`] : [],
-            },
-          },
-        },
-        scales: {
-          ...chartOpts(false).scales,
-          x: { ...chartOpts(false).scales.x, stacked: false },
-          y: {
-            ...chartOpts(false).scales.y,
-            stacked: false,
-            beginAtZero: true,
-          },
-        },
-      },
-    },
-  );
 }
 
 /** Alertas de riesgo — bebés con baja asistencia (colapsable con toggle) */

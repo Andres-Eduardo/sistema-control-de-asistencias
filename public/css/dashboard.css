@@ -51,6 +51,7 @@ body {
 .body-layout {
   display: flex;
   flex: 1;
+  padding-left: 68px;
 }
 
 /* ─── Sidebar ─── */
@@ -63,10 +64,12 @@ body {
   align-items: center;
   padding: 12px 0;
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
-  min-height: calc(100vh - 56px);
+  position: fixed;
+  top: 56px;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 50;
 }
 
 .sidebar-nav {
@@ -126,8 +129,6 @@ body {
 /* ─── Navbar / Header ─────────────────────────────────────── */
 .header {
   background: linear-gradient(135deg, #6ab514 0%, #85da1a 50%, #96e820 100%);
-  position: sticky;
-  top: 0;
   z-index: 100;
   box-shadow: 0 4px 24px rgba(106, 181, 20, 0.45);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);

@@ -225,7 +225,7 @@ app.get("/api/bebes", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("bebes")
-      .select("nombre_bebe, nombre_madre, fase, programa, edad, tipo")
+      .select("id, nombre_bebe, nombre_madre, fase, programa, edad, tipo")
       .order("nombre_bebe", { ascending: true })
       .limit(5000);
     if (error) throw error;
@@ -237,6 +237,7 @@ app.get("/api/bebes", async (req, res) => {
 
     res.json({
       bebes: data.map((b) => ({
+        id: b.id,
         NombreBebe: b.nombre_bebe,
         NombreMadre: b.nombre_madre,
         Fase: b.fase,

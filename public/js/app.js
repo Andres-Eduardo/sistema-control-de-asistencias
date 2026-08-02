@@ -343,6 +343,18 @@ function processFromServer(results) {
 }
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
+// Fecha de HOY en zona horaria LOCAL del navegador, formato YYYY-MM-DD.
+// ¡Nunca usar new Date().toISOString().split("T")[0] para esto! Esa función
+// siempre da la fecha en UTC — en Colombia (UTC-5), desde las 7pm en adelante
+// ya devuelve la fecha de MAÑANA, lo que causaba que el caché del día se
+// descartara de golpe y que los registros se guardaran con la fecha
+// equivocada en Supabase.
+function fechaLocalHoy() {
+  const d = new Date();
+  const off = d.getTimezoneOffset() * 60000;
+  return new Date(d - off).toISOString().split("T")[0];
+}
+
 // Edad como texto libre. Antes forzaba cualquier número a los rangos fijos
 // "6-15"/"16-30" — ahora solo limpia espacios y deja el valor tal cual lo
 // escribió el usuario (o como venga del Excel/BD).
@@ -871,7 +883,7 @@ function updateField(day, index, field, value) {
 function saveToLocalStorage() {
   // Guardamos junto a los datos la fecha ISO del día actual.
   // Esto permite detectar datos de días anteriores al cargar.
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = fechaLocalHoy();
   localStorage.setItem(
     "datos_asistencia",
     JSON.stringify({ fecha: hoy, data: modifiedData }),
@@ -884,7 +896,7 @@ function loadFromLocalStorage() {
 
   try {
     const parsed = JSON.parse(raw);
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = fechaLocalHoy();
 
     // Formato viejo (sin fecha) o datos de otro día → descartar
     if (!parsed.fecha || !parsed.data) {
@@ -996,7 +1008,7 @@ function exportToExcel() {
     return;
   }
 
-  const fechaISO = new Date().toISOString().split("T")[0];
+  const fechaISO = fechaLocalHoy();
 
   // 1. Preparar y descargar Excel
   const dataOrdered = dataToExport.map((row) => {

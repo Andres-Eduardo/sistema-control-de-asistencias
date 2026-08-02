@@ -324,15 +324,30 @@ app.post("/api/bebes", async (req, res) => {
       bebeId = inserted.id;
     }
 
-    if (Array.isArray(dias) && dias.length > 0) {
+    if (Array.isArray(dias)) {
       const diasValidos = dias.filter((d) => DIAS_VALIDOS.includes(d));
-      if (diasValidos.length > 0) {
-        const { error: errAs } = await supabase.from("asistencias").upsert(
-          diasValidos.map((dia) => ({ bebe_id: bebeId, dia })),
-          { onConflict: "bebe_id,dia", ignoreDuplicates: true },
-        );
-        if (errAs) throw errAs;
+
+      // Protección: no dejar un bebé sin ningún día asignado (mismo criterio
+      // que PUT /api/bebes/:id).
+      if (diasValidos.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Debe asignar al menos un día de asistencia" });
       }
+
+      // Reemplazar por completo (borrar + reinsertar), no solo agregar —
+      // así, si estás re-registrando un beneficiario ya existente con menos
+      // días marcados, los días viejos que quitaste sí se eliminan.
+      const { error: errDel } = await supabase
+        .from("asistencias")
+        .delete()
+        .eq("bebe_id", bebeId);
+      if (errDel) throw errDel;
+
+      const { error: errAs } = await supabase
+        .from("asistencias")
+        .insert(diasValidos.map((dia) => ({ bebe_id: bebeId, dia })));
+      if (errAs) throw errAs;
     }
 
     res.json({ ok: true, id: bebeId });

@@ -21,6 +21,15 @@ function normDia(d = "") {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+// Fecha de HOY en zona horaria LOCAL (no UTC) — new Date().toISOString() da
+// la fecha en UTC, y en Colombia (UTC-5) desde las 7pm ya adelanta al día
+// siguiente, poniendo mal la fecha por defecto en el selector.
+function fechaLocalHoy() {
+  const d = new Date();
+  const off = d.getTimezoneOffset() * 60000;
+  return new Date(d - off).toISOString().split("T")[0];
+}
+
 // ── Drag & Drop ───────────────────────────────────────────
 const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
@@ -579,7 +588,7 @@ function initExportar(rol) {
   document.getElementById("delSection").style.display = "block";
 
   // Fecha por defecto: hoy
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaLocalHoy();
   document.getElementById("expFecha").value = hoy;
 
   document
@@ -777,9 +786,8 @@ async function eliminarDia(fecha, dia) {
 
     toast(`✓ ${data.eliminados} registros de ${dia} ${fecha} eliminados`);
 
-    // Limpiar campos
+    // Limpiar campo
     document.getElementById("delFecha").value = "";
-    document.getElementById("delDia").value = "";
   } catch (e) {
     toast("Error: " + e.message, true);
   } finally {

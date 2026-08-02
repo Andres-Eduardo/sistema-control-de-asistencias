@@ -511,6 +511,15 @@ const uploadZone = document.getElementById("supabaseZone"); // zona principal re
 
 const LS_RANGO_KEY = "asistencia_dash_ultimo_rango";
 
+// Fecha de HOY en zona horaria LOCAL (no UTC) — ver nota igual en app.js:
+// new Date().toISOString() da la fecha en UTC, y en Colombia (UTC-5) desde
+// las 7pm ya adelanta al día siguiente.
+function fechaLocalHoy() {
+  const d = new Date();
+  const off = d.getTimezoneOffset() * 60000;
+  return new Date(d - off).toISOString().split("T")[0];
+}
+
 // La inicialización ya NO corre aquí automáticamente.
 // El script inline de dashboard.html llama initDashboard() DESPUÉS de requireAuth().
 function initDashboard() {
@@ -548,7 +557,7 @@ function setupSupabaseLoader() {
   if (!btnCargar) return;
 
   // Poner fecha de hoy por defecto en los inputs
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = fechaLocalHoy();
   inputDesde.value = hoy;
   inputHasta.value = hoy;
 
@@ -678,7 +687,7 @@ async function cargarDesdeSupabase(desde, hasta) {
 async function cargarHistoricoServidor() {
   // Intentar cargar desde Supabase automáticamente con la fecha de hoy
   try {
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = fechaLocalHoy();
     const res = await authFetch(`/api/asistencia?fecha=${hoy}`);
     if (!res.ok) return;
     const { total } = await res.json();

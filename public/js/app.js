@@ -443,7 +443,7 @@ function renderTable(day, data, searchTerm = "") {
     <thead>
       <tr>
         <th>#</th><th>Nombre Beneficiario</th><th>Nombre Acudiente</th><th>Nivel</th>
-        <th>Programa</th><th>Edad</th><th>Asistencia</th>
+        <th>Programa</th><th>Edad</th><th>Asistencia</th><th>Tipo</th>
       </tr>
     </thead>
   `;
@@ -546,13 +546,20 @@ function renderRow(tr, row, day, index, rowNum) {
 
   btnPair.append(btnSi, btnNo, btnVer, btnEditar);
 
-  // ── Select tipo: Normal / Tipo A / Tipo B ────────────────────────────────
-  // Permite cambiar el tipo de un beneficiario ya añadido sin tener que eliminarlo
+  btnPair.append(btnSi, btnNo, btnVer, btnEditar);
+  tdAsis.appendChild(btnPair);
+  tr.appendChild(tdAsis);
+
+  // ── Tipo: Normal / Tipo A / Tipo B — columna propia con color ────────────
+  const tdTipo = document.createElement("td");
+  tdTipo.className = "td-tipo";
   const selTipo = document.createElement("select");
-  selTipo.className = "sel-tipo-bebe";
   selTipo.title = "Cambiar tipo de registro";
+  const tipoClase = (val) =>
+    val === "nocidi" ? "tipo-b" : val === "extras" ? "tipo-a" : "tipo-normal";
   const tipoActual =
     row.NoCidi === "Sí" ? "nocidi" : row.Extras === "Sí" ? "extras" : "normal";
+  selTipo.className = "sel-tipo-bebe " + tipoClase(tipoActual);
   [
     { value: "normal", label: "Normal" },
     { value: "nocidi", label: "Tipo B" },
@@ -568,13 +575,13 @@ function renderRow(tr, row, day, index, rowNum) {
     const val = selTipo.value;
     updateField(day, index, "NoCidi", val === "nocidi" ? "Sí" : "");
     updateField(day, index, "Extras", val === "extras" ? "Sí" : "");
+    selTipo.className = "sel-tipo-bebe " + tipoClase(val);
     tr.className = getRowClass();
     updateCounter();
     saveToLocalStorage();
   };
-  btnPair.appendChild(selTipo);
-  tdAsis.appendChild(btnPair);
-  tr.appendChild(tdAsis);
+  tdTipo.appendChild(selTipo);
+  tr.appendChild(tdTipo);
 
   // ── Acordeón de reporte ───────────────────────────────────────────────────
   const accordionTr = document.createElement("tr");

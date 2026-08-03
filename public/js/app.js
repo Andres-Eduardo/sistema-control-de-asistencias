@@ -1082,15 +1082,25 @@ function exportToExcel() {
   })
     .then((r) => r.json())
     .then((r) => {
-      if (r.ok)
+      if (r.ok) {
         console.log(
           `✅ Supabase: ${r.guardados} registros — ${dayToExport} ${fechaISO}`,
         );
-      else console.warn("⚠️ Supabase error:", r.error);
+      } else {
+        console.warn("⚠️ Supabase error:", r.error);
+        toast(
+          "El Excel se descargó, pero NO se guardó en la base de datos — avisa al admin.",
+          true,
+        );
+      }
     })
-    .catch((e) =>
-      console.warn("⚠️ No se pudo guardar en Supabase:", e.message),
-    );
+    .catch((e) => {
+      console.warn("⚠️ No se pudo guardar en Supabase:", e.message);
+      toast(
+        "El Excel se descargó, pero NO se guardó en la base de datos — revisa tu conexión.",
+        true,
+      );
+    });
 
   // 3. Limpiar tabla para el día siguiente
   // Se eliminan Extras y NoCidi (son temporales del día).

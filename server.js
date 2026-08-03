@@ -591,6 +591,19 @@ app.post("/api/asistencia/guardar", async (req, res) => {
     console.log(
       `✅  Asistencia guardada: ${guardados}/${filas.length} registros (${omitidos} ya existían) — ${dia} ${fecha}`,
     );
+
+    // Si hubo errores Y no se guardó nada, es una falla real — no un éxito
+    // parcial. Antes esto siempre devolvía ok:true aunque guardados=0,
+    // y el frontend nunca se enteraba (solo quedaba en el log del servidor).
+    if (erroresFila.length && guardados === 0) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          "No se guardó ningún registro en la base de datos: " + erroresFila[0],
+        advertencias: erroresFila,
+      });
+    }
+
     res.json({
       ok: true,
       guardados: guardados - omitidos,

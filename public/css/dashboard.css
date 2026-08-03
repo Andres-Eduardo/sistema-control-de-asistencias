@@ -45,6 +45,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-top: 56px;
 }
 
 /* ─── Body layout: sidebar + contenido ─── */
@@ -130,6 +131,10 @@ body {
 /* ─── Navbar / Header ─────────────────────────────────────── */
 .header {
   background: linear-gradient(135deg, #6ab514 0%, #85da1a 50%, #96e820 100%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   z-index: 100;
   box-shadow: 0 4px 24px rgba(106, 181, 20, 0.45);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
@@ -1132,6 +1137,12 @@ tbody tr:last-child td {
   }
   .header-eyebrow {
     display: none;
+  }
+  .sidebar {
+    top: 64px;
+  }
+  body {
+    padding-top: 64px;
   }
   .kpi-strip {
     grid-template-columns: 1fr 1fr;

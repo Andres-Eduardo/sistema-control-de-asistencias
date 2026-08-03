@@ -35,9 +35,10 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  padding-top: 60px;
 }
 
-/* ─── Header full-width ─── */
+/* ─── Header full-width — fijo, se queda arriba siempre ─── */
 header {
   background-color: var(--primary-color);
   color: white;
@@ -45,6 +46,10 @@ header {
   width: 100%;
   box-sizing: border-box;
   flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
 }
 
 .header-flex {
@@ -553,6 +558,14 @@ input {
   .header-flex {
     flex-direction: column;
     text-align: center;
+  }
+  /* En móvil el header crece (logo apilado sobre el texto), así que el
+     sidebar fijo necesita empezar más abajo para no dejar un hueco. */
+  .sidebar {
+    top: 104px;
+  }
+  body {
+    padding-top: 104px;
   }
 }
 

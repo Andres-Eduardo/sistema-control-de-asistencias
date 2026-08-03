@@ -1204,3 +1204,32 @@ tbody td:nth-child(7) {
 .sidebar-user-logout:hover {
   background: #ffebee;
 }
+
+/* ─── Toast — Listado de asistencia ─── */
+.toast-asis {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #2e7d32;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  z-index: 2000;
+  pointer-events: none;
+  max-width: 320px;
+}
+
+.toast-asis.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-asis.error {
+  background: #c62828;
+}

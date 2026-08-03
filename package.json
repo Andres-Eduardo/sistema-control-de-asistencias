@@ -1,7 +1,7 @@
 {
-  "name": "cidi-asistencia",
+  "name": "sistema-control-de-asistencias",
   "version": "1.0.0",
-  "description": "Control de Asistencia — Fundación Juanfe",
+  "description": "Sistema de control de asistencia diaria con dashboard analítico, catálogo de beneficiarios e importación/exportación de Excel. Node.js + Express + Supabase.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

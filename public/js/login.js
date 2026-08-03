@@ -1,4 +1,4 @@
-// js/login.js — Lógica del login · Fundación Juanfe
+// js/login.js — Lógica del login
 let _supabase = null;
 
 // Limpiar sesión previa al cargar el login — sin llamar APIs de Supabase

@@ -110,6 +110,9 @@ function _lockTable(on) {
   if (!content) return;
   content.style.pointerEvents = on ? "none" : "";
   content.style.opacity = on ? "0.55" : "";
+  document
+    .getElementById("tabs-loading-overlay")
+    ?.classList.toggle("hide", !on);
 }
 
 function setupEventListeners() {
@@ -117,13 +120,13 @@ function setupEventListeners() {
     // Mostrar modal de confirmación antes de exportar
     const activeTab = document.querySelector(".tab.active");
     if (!activeTab) {
-      alert("Por favor, selecciona un día primero.");
+      toast("Por favor, selecciona un día primero.", true);
       return;
     }
     const dayToExport = activeTab.dataset.day;
     const dataToExport = modifiedData[dayToExport] || [];
     if (dataToExport.length === 0) {
-      alert(`No hay datos para exportar en el día ${dayToExport}`);
+      toast(`No hay datos para exportar en el día ${dayToExport}`, true);
       return;
     }
 
@@ -343,6 +346,13 @@ function processFromServer(results) {
 }
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
+function toast(msg, error = false) {
+  const t = document.getElementById("toastAsis");
+  t.textContent = msg;
+  t.className = "toast-asis show" + (error ? " error" : "");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
 // Fecha de HOY en zona horaria LOCAL del navegador, formato YYYY-MM-DD.
 // ¡Nunca usar new Date().toISOString().split("T")[0] para esto! Esa función
 // siempre da la fecha en UTC — en Colombia (UTC-5), desde las 7pm en adelante
@@ -376,9 +386,27 @@ function formatDate(date) {
   return `${d}-${m}-${date.getFullYear()}`;
 }
 
-function updateSyncStatus(_state, _text) {
-  // Estado de BD no se muestra en la UI — solo log interno
-  console.log(`[BD] ${_text}`);
+let _syncOkTimer = null;
+function updateSyncStatus(state, text) {
+  const wrap = document.getElementById("sync-status");
+  const dot = document.getElementById("sync-dot");
+  const label = document.getElementById("sync-text");
+  if (!wrap || !dot || !label) return;
+
+  clearTimeout(_syncOkTimer);
+  wrap.style.display = "flex";
+  dot.className = "sync-dot sync-" + state;
+  label.textContent = text;
+
+  // El estado "ok" se oculta solo después de unos segundos — no hace
+  // falta seguir ocupando espacio una vez que ya cargó bien. El estado
+  // "error" se queda visible, porque el usuario debe saber que está
+  // viendo datos guardados localmente, no los más recientes del servidor.
+  if (state === "ok") {
+    _syncOkTimer = setTimeout(() => {
+      wrap.style.display = "none";
+    }, 4000);
+  }
 }
 
 // ─── Renderizado de tabs ──────────────────────────────────────────────────────
@@ -985,7 +1013,7 @@ function filterData() {
 function exportToExcel() {
   const activeTab = document.querySelector(".tab.active");
   if (!activeTab) {
-    alert("Por favor, selecciona un día primero.");
+    toast("Por favor, selecciona un día primero.", true);
     return;
   }
 
@@ -994,9 +1022,9 @@ function exportToExcel() {
 
   // Validar que sea un día hábil — en fin de semana apiDia sería undefined
   if (!apiDia) {
-    alert(
-      `"${dayToExport}" no es un día hábil.\n` +
-        `Solo se puede exportar de Lunes a Viernes.`,
+    toast(
+      `"${dayToExport}" no es un día hábil. Solo se puede exportar de Lunes a Viernes.`,
+      true,
     );
     return;
   }
@@ -1004,7 +1032,7 @@ function exportToExcel() {
   const dataToExport = modifiedData[dayToExport] || [];
 
   if (dataToExport.length === 0) {
-    alert(`No hay datos para exportar en el día ${dayToExport}`);
+    toast(`No hay datos para exportar en el día ${dayToExport}`, true);
     return;
   }
 
@@ -1221,8 +1249,9 @@ function addAddBabyButton() {
     };
 
     if (!newBaby.NombreBebe || !newBaby.NombreMadre) {
-      alert(
+      toast(
         "Por favor complete al menos el nombre del beneficiario y el acudiente.",
+        true,
       );
       return;
     }

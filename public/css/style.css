@@ -373,7 +373,7 @@ input {
 
 /* ─── Indicador de sincronización ─── */
 .sync-status {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 8px;
   padding: 4px 0;
@@ -1203,6 +1203,43 @@ tbody td:nth-child(7) {
 
 .sidebar-user-logout:hover {
   background: #ffebee;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Overlay de carga inicial sobre la tabla ─── */
+.tabs-loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 20px;
+  color: #888;
+  font-size: 13px;
+  font-weight: 500;
+}
+.tabs-loading-overlay .spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2.5px;
+}
+.tabs-loading-overlay.hide {
+  display: none;
 }
 
 /* ─── Toast — Listado de asistencia ─── */

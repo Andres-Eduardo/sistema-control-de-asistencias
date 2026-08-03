@@ -65,6 +65,10 @@
       <section class="controls-row">
         <input type="text" id="search-input" class="search-input" placeholder="Buscar beneficiario o acudiente..." />
         <nav class="tabs" id="days-tabs" role="tablist"></nav>
+        <span id="sync-status" class="sync-status">
+          <span id="sync-dot" class="sync-dot"></span>
+          <span id="sync-text" class="sync-text"></span>
+        </span>
         <button id="add-baby-btn" class="btn btn-add-baby">
           ＋ Añadir beneficiario
         </button>
@@ -73,7 +77,12 @@
         </button>
       </section>
 
+      <div id="tabs-loading-overlay" class="tabs-loading-overlay">
+        <span class="spinner"></span>
+        <span>Cargando listado desde base de datos...</span>
+      </div>
       <div id="tabs-content"></div>
+      <!-- /.main -->
     </main>
   </div>
   <!-- /.body-layout -->
